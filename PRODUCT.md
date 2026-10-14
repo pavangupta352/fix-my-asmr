@@ -18,7 +18,7 @@ ASMR artists who record on their phones, mainly iPhones (the first known user re
 
 A free, open-source tool that fixes the audio problems phone recordings cause for ASMR. The artist picks a video or audio file, the tool checks the audio, applies the right fixes in one click, lets them hear before and after, and saves a fixed file. Video stays untouched; only the audio changes.
 
-The trigger case: an iPhone 17 user reports that back-camera recordings come out with left and right swapped. The full list of fixes depends on the research in `reports/`.
+The trigger case: an iPhone 17 user reported that back-camera recordings came out with left and right swapped. The research in `reports/` found that this is almost always the camera's point of view, which is correct for viewers, so the app checks the sides against the picture before swapping.
 
 Success means an artist with no audio knowledge gets a fixed, upload-ready file in a few minutes, on any device, without installing anything or uploading their recording anywhere.
 
@@ -38,15 +38,16 @@ Everything runs on the artist's own device inside the browser: no upload, no acc
 - Must open iPhone video files (.MOV/.MP4) and common audio files.
 - Must work on iPhone Safari and on current desktop browsers.
 - One default action fixes the common problems; other options stay optional.
-- Undecided: exact fix list (pending research), license, offline/installable support.
+- License: MIT. Fix list: side check and swap, silent or cancelling sides, rumble, mains hum, hiss, volume and optional 3D width, plus rotate and mirror for the picture.
+- Not built yet: offline use (no service worker).
 
 ## Brand Commitments
 
-Name: Fix My ASMR (delegated choice; matches the project folder). No voice, logo or other identity assets exist yet.
+Name: Fix My ASMR. The mark is two small pads, blue and red, with a dot on the left one (`assets/icon.svg`).
 
 ## Evidence on Hand
 
-None yet: no users, testimonials, measurements or benchmarks. Research notes and a report live in `research_notes/` and `reports/`. Do not invent usage numbers, quality claims or endorsements.
+None yet: no users, testimonials, measurements or benchmarks. The research report is in `reports/`. Do not invent usage numbers, quality claims or endorsements.
 
 ## Product Principles
 

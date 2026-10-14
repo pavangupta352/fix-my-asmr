@@ -175,7 +175,7 @@ components:
 
 The L and R that every listener checks before pressing play are the interface. Two earcup pads, cobalt on the left and vermilion on the right, sit on a neutral graphite ground like a pair of soft-touch headphones laid on a desk. Their letters are debossed at monumental scale and lit by a single light source through real height-map lighting, so the relief comes from light falling on a shape and never from painted bevels. Everything else on the page (the file, the player, the fix list, the reading sections) is quiet graphite and one family of type, so the pads keep the colour and the attention.
 
-The system is dark only, chosen from the use scene: artists open it late at night next to recording rooms and editing tools. The ground carries a fixed 7% fractal-noise grain so it reads as a material, not a void. Depth is tactile: molded keys you press, plates that stand up when a setting is engaged and sink in when it is off. Motion is rare and physical. The pads are the ears and never move; when the recording is re-routed, the small "recorded left / recorded right" tags under them trade places.
+The system is dark only, chosen from the use scene: artists open it late at night next to recording rooms and editing tools. The ground carries a fixed 7% fractal-noise grain so it reads as a material. Depth is tactile: molded keys you press, plates that stand up when a setting is engaged and sink in when it is off. Motion is rare and physical. The pads are the ears and never move; when the recording is re-routed, the small "recorded left / recorded right" tags under them trade places.
 
 It refuses the dark DAW with a neon waveform and the pastel moon-and-clouds "sleepy ASMR" page.
 
@@ -318,17 +318,17 @@ When the sound is swapped, the two tags trade slots along separate lanes (16px a
 ## Do's and Don'ts
 
 ### Do:
-- **Do** render every molded surface (pads, socket, keys, plates) through the shared lighting in relief.js with the single light at azimuth 235, elevation 52.
-- **Do** keep blue for left, red for right and purple only for shared sound, in every view that shows channels.
-- **Do** show engaged settings as raised plates and off settings as pressed plates.
-- **Do** move the route tags, never the pads, to show re-routing.
-- **Do** use cubic-bezier(0.16, 1, 0.3, 1) for state motion (140 to 180ms on controls, 640ms for the swap, 900ms for meter sweeps) and honour prefers-reduced-motion.
-- **Do** keep the 7% grain fixed behind everything, including the sticky band.
+- Render every molded surface (pads, socket, keys, plates) through the shared lighting in relief.js with the single light at azimuth 235, elevation 52.
+- Keep blue for left, red for right and purple only for shared sound, in every view that shows channels.
+- Show engaged settings as raised plates and off settings as pressed plates.
+- Move the route tags, never the pads, to show re-routing.
+- Use cubic-bezier(0.16, 1, 0.3, 1) for state motion (140 to 180ms on controls, 640ms for the swap, 900ms for meter sweeps) and honour prefers-reduced-motion.
+- Keep the 7% grain fixed behind everything, including the sticky band.
 
 ### Don't:
-- **Don't** add a light theme; the system is dark only by use scene.
-- **Don't** fake relief with CSS bevels, inset highlight stacks or text-shadow embossing.
-- **Don't** use purple, cobalt or vermilion as a generic accent, link or state colour.
-- **Don't** introduce a second typeface or set the pad letters as live HTML text.
-- **Don't** use hard offset shadows; shadows under molded objects stay soft and negative-spread.
-- **Don't** drift toward the neon-waveform DAW or the pastel sleepy-ASMR page.
+- Don't add a light theme; the system is dark only by use scene.
+- Don't fake relief with CSS bevels, inset highlight stacks or text-shadow embossing.
+- Don't use purple, cobalt or vermilion as a generic accent, link or state colour.
+- Don't introduce a second typeface or set the pad letters as live HTML text.
+- Don't use hard offset shadows; shadows under molded objects stay soft and negative-spread.
+- Don't drift toward the neon-waveform DAW or the pastel sleepy-ASMR page.
