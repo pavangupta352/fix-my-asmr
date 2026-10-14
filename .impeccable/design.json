@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-14T15:00:00Z",
+  "title": "Design System: Fix My ASMR",
+  "extensions": {
+    "colorMeta": {
+      "ground": { "role": "neutral", "displayName": "Graphite Ground", "canonical": "#222222", "tonalRamp": ["#0b0b0b", "#242424", "#404040", "#5d5d5d", "#808080", "#a4a4a4", "#cacaca", "#eeeeee"] },
+      "ground-2": { "role": "neutral", "displayName": "Raised Graphite", "canonical": "#2a2a2a", "tonalRamp": ["#0b0b0b", "#242424", "#404040", "#5d5d5d", "#808080", "#a4a4a4", "#cacaca", "#eeeeee"] },
+      "ground-3": { "role": "neutral", "displayName": "Upper Graphite", "canonical": "#333333", "tonalRamp": ["#0b0b0b", "#242424", "#404040", "#5d5d5d", "#808080", "#a4a4a4", "#cacaca", "#eeeeee"] },
+      "line": { "role": "neutral", "displayName": "Seam", "canonical": "#3a3a3a" },
+      "line-2": { "role": "neutral", "displayName": "Edge", "canonical": "#525252" },
+      "text": { "role": "neutral", "displayName": "Chalk", "canonical": "#efefef", "tonalRamp": ["#0b0b0b", "#242424", "#404040", "#5d5d5d", "#808080", "#a4a4a4", "#cacaca", "#eeeeee"] },
+      "text-2": { "role": "neutral", "displayName": "Ash", "canonical": "#b0b0b0" },
+      "text-3": { "role": "neutral", "displayName": "Smoke", "canonical": "#959595" },
+      "key-ink": { "role": "neutral", "displayName": "Key Ink", "canonical": "#1c1c1c" },
+      "focus": { "role": "neutral", "displayName": "Focus White", "canonical": "#f4f5f7" },
+      "l": { "role": "primary", "displayName": "Cobalt Left", "canonical": "oklch(49.4% 0.201 265.9)", "tonalRamp": ["#01052c", "#08195f", "#163196", "#284ecc", "#4d77ea", "#7da1f7", "#b1caff", "#e2efff"] },
+      "l-lo": { "role": "primary", "displayName": "Cobalt Left Low", "canonical": "#2246b8" },
+      "l-hi": { "role": "primary", "displayName": "Cobalt Left High", "canonical": "#4c71ea" },
+      "l-lit": { "role": "secondary", "displayName": "Sky Lit", "canonical": "oklch(87.0% 0.072 238.1)", "tonalRamp": ["#000c25", "#002742", "#104561", "#326382", "#5587a7", "#79accd", "#9ed2f5", "#d7f3ff"] },
+      "l-ink": { "role": "secondary", "displayName": "Cobalt Ink", "canonical": "#dfe7ff" },
+      "l-sig": { "role": "secondary", "displayName": "Left Signal", "canonical": "#7ea8ff" },
+      "r": { "role": "primary", "displayName": "Vermilion Right", "canonical": "oklch(57.0% 0.171 32.3)", "tonalRamp": ["#240000", "#500000", "#820000", "#a9250d", "#d24f37", "#eb836f", "#fcb7a8", "#ffe5de"] },
+      "r-lo": { "role": "primary", "displayName": "Vermilion Right Low", "canonical": "#ad3a25" },
+      "r-hi": { "role": "primary", "displayName": "Vermilion Right High", "canonical": "#e2614a" },
+      "r-lit": { "role": "secondary", "displayName": "Coral Lit", "canonical": "oklch(88.8% 0.060 36.2)", "tonalRamp": ["#1e0100", "#3c180e", "#5b3429", "#7c5146", "#a17467", "#c7988b", "#efbdb0", "#ffe6dc"] },
+      "r-sig": { "role": "secondary", "displayName": "Right Signal", "canonical": "#ff8b74" },
+      "both": { "role": "tertiary", "displayName": "Shared Purple", "canonical": "oklch(77.9% 0.132 299.9)", "tonalRamp": ["#110027", "#2f0955", "#4c297a", "#6a489c", "#8d6cc3", "#b190eb", "#d2bffa", "#f2e9ff"] }
+    },
+    "typographyMeta": {
+      "pad-letter": { "displayName": "Pad Letter", "purpose": "Debossed L and R inside the pad relief, rendered as SVG text in Barlow 800." },
+      "display": { "displayName": "Display", "purpose": "Reading-section headings." },
+      "headline": { "displayName": "Headline", "purpose": "The one plain sentence under the pads in the empty state." },
+      "title": { "displayName": "Title", "purpose": "Panel, fix and done headings (17 to 22px, 700)." },
+      "body": { "displayName": "Body", "purpose": "Running copy, tabular numerals, 66ch max in reading sections." },
+      "body-small": { "displayName": "Body Small", "purpose": "Secondary copy in Ash: facts, hints, fix explanations." },
+      "label": { "displayName": "Label", "purpose": "Uppercase ear names, Adjust group headings, audio-only placeholder." },
+      "stamp": { "displayName": "Stamp", "purpose": "Uppercase text on lit state and setting plates." }
+    },
+    "materials": [
+      { "name": "relief-surface", "value": "SVG height map -> feGaussianBlur + fractalNoise grain -> feDiffuseLighting + feSpecularLighting (feDistantLight azimuth 235, elevation 52; specularConstant 0.18, exponent 20)", "purpose": "Pads, socket, pick and molded light keys. Letters press in (level below face), the tactile dot stands up (level 1)." },
+      { "name": "plate-raised", "value": "feDiffuseLighting surfaceScale 3.2 on blurred alpha (stdDeviation 1.3), same light", "purpose": "Engaged state and recommended-setting plates." },
+      { "name": "plate-pressed", "value": "feDiffuseLighting surfaceScale -3.2 on blurred alpha (stdDeviation 1.3), same light", "purpose": "Off and not-needed plates." },
+      { "name": "grain", "value": "fixed full-page feTurbulence fractalNoise (baseFrequency .85, 3 octaves) at opacity 0.07", "purpose": "Soft-touch ground texture behind everything, repeated behind the sticky band." }
+    ],
+    "shadows": [
+      { "name": "pad-rest", "value": "0 18px 32px -20px rgb(0 0 0 / 0.8)", "purpose": "Under each pad." },
+      { "name": "key-rest", "value": "0 12px 22px -14px rgb(0 0 0 / 0.9)", "purpose": "Under the primary molded key." },
+      { "name": "key-pressed", "value": "0 6px 12px -10px rgb(0 0 0 / 0.9)", "purpose": "Primary key while pressed." },
+      { "name": "round-key", "value": "0 8px 14px -8px rgb(0 0 0 / 0.8)", "purpose": "Play button." },
+      { "name": "pick-lift", "value": "drop-shadow(0 8px 10px rgb(0 0 0 / 0.45))", "purpose": "Socket pick (filter); pressed 0 3px 4px." },
+      { "name": "tag", "value": "0 4px 8px -4px rgb(0 0 0 / 0.6)", "purpose": "Route tags." },
+      { "name": "segment-checked", "value": "0 2px 5px -1px rgb(0 0 0 / 0.55)", "purpose": "Checked segmented option." },
+      { "name": "socket-moat", "value": "0 0 0 9px var(--ground)", "purpose": "Ground ring cutting the socket out of the pads (8px on small screens)." }
+    ],
+    "motion": [
+      { "name": "ease-out", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "All state motion." },
+      { "name": "control", "value": "140ms", "purpose": "Button press and lift, colour and border changes." },
+      { "name": "switch", "value": "160ms colour, 180ms knob", "purpose": "Switch and Adjust disclosure chevron." },
+      { "name": "stamp-press", "value": "220ms scale 1.12 -> 1", "purpose": "A plate whose state just changed." },
+      { "name": "route-swap", "value": "640ms, tags on separate 16px lanes, scale 1.06 at midpoint", "purpose": "Signature: route tags trade places; pads never move." },
+      { "name": "meter-sweep", "value": "900ms", "purpose": "Side-check ping flash and lit-letter sweep." },
+      { "name": "reduced-motion", "value": "durations forced to 1ms; swap and sweep skipped", "purpose": "prefers-reduced-motion." }
+    ],
+    "breakpoints": [
+      { "name": "stack", "value": "860px" },
+      { "name": "compact", "value": "640px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Molded Key",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Chalk key lit as relief; the one main action (Fix and save video, Share).",
+      "html": "<button class=\"ds-key\"><svg class=\"ds-key-face\" viewBox=\"0 0 320 56\" preserveAspectRatio=\"none\" aria-hidden=\"true\"><defs><filter id=\"dskf\" color-interpolation-filters=\"sRGB\"><feGaussianBlur in=\"SourceAlpha\" stdDeviation=\"1.6\" result=\"s\"/><feDiffuseLighting in=\"s\" surfaceScale=\"6\" lighting-color=\"#fff\" result=\"d\"><feDistantLight azimuth=\"235\" elevation=\"52\"/></feDiffuseLighting><feComposite in=\"SourceGraphic\" in2=\"d\" operator=\"arithmetic\" k1=\"1.27\" result=\"l\"/><feComposite in=\"l\" in2=\"SourceAlpha\" operator=\"in\"/></filter></defs><rect width=\"320\" height=\"56\" rx=\"16\" fill=\"#efefef\" filter=\"url(#dskf)\"/></svg><span>Fix and save video</span></button>",
+      "css": ".ds-key { position: relative; isolation: isolate; display: inline-flex; align-items: center; justify-content: center; min-height: 56px; width: 320px; padding: 0 22px; border: 0; border-radius: 16px; background: transparent; color: #1c1c1c; font: 700 18px/1 Barlow, ui-sans-serif, system-ui, sans-serif; box-shadow: 0 12px 22px -14px rgb(0 0 0 / 0.9); cursor: pointer; transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 140ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-key-face { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; } .ds-key:hover { transform: translateY(-1px); } .ds-key:active { transform: translateY(2px); box-shadow: 0 6px 12px -10px rgb(0 0 0 / 0.9); } .ds-key:focus-visible { outline: 2.5px solid #f4f5f7; outline-offset: 3px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary actions on graphite (Choose another, Play another check).",
+      "html": "<button class=\"ds-ghost\">Choose another</button>",
+      "css": ".ds-ghost { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: 12px; border: 1.5px solid var(--line-2, #525252); background: var(--ground-2, #2a2a2a); color: var(--text, #efefef); font: 600 16px/1 Barlow, ui-sans-serif, system-ui, sans-serif; cursor: pointer; transition: background-color 140ms cubic-bezier(0.16, 1, 0.3, 1), border-color 140ms cubic-bezier(0.16, 1, 0.3, 1), transform 140ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-ghost:hover { background: var(--ground-3, #333333); border-color: var(--text-3, #959595); } .ds-ghost:active { transform: translateY(1px); } .ds-ghost:focus-visible { outline: 2.5px solid var(--focus, #f4f5f7); outline-offset: 3px; }"
+    },
+    {
+      "name": "Route Tags",
+      "kind": "chip",
+      "refersTo": "chip-l",
+      "description": "Recorded-left and recorded-right tags under the ears; they trade places on swap.",
+      "html": "<div class=\"ds-ears\"><div class=\"ds-ear\"><span class=\"ds-ear-name\">Left ear</span><span class=\"ds-chip ds-chip-l\">recorded left</span></div><div class=\"ds-ear\"><span class=\"ds-ear-name\">Right ear</span><span class=\"ds-chip ds-chip-r\">recorded right</span></div></div>",
+      "css": ".ds-ears { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; text-align: center; font-family: Barlow, ui-sans-serif, system-ui, sans-serif; } .ds-ear { display: grid; justify-items: center; gap: 6px; } .ds-ear-name { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-2, #b0b0b0); } .ds-chip { display: inline-flex; align-items: center; min-height: 26px; padding: 0 11px; border-radius: 99px; font-size: 13px; font-weight: 700; white-space: nowrap; box-shadow: 0 4px 8px -4px rgb(0 0 0 / 0.6); } .ds-chip-l { background: var(--l, #2b52d1); color: var(--l-ink, #dfe7ff); } .ds-chip-r { background: var(--r, #c8452e); color: #fff; }"
+    },
+    {
+      "name": "Stamp Plates",
+      "kind": "custom",
+      "refersTo": "stamp-engaged",
+      "description": "Lit state plates: raised chalk when engaged, pressed graphite when off.",
+      "html": "<div class=\"ds-stamps\"><svg width=\"0\" height=\"0\" style=\"position:absolute\" aria-hidden=\"true\"><defs><filter id=\"ds-plate-raised\" x=\"-20%\" y=\"-40%\" width=\"140%\" height=\"180%\" primitiveUnits=\"userSpaceOnUse\" color-interpolation-filters=\"sRGB\"><feGaussianBlur in=\"SourceAlpha\" stdDeviation=\"1.3\" result=\"s\"/><feDiffuseLighting in=\"s\" surfaceScale=\"3.2\" lighting-color=\"#fff\" result=\"d\"><feDistantLight azimuth=\"235\" elevation=\"52\"/></feDiffuseLighting><feComposite in=\"SourceGraphic\" in2=\"d\" operator=\"arithmetic\" k1=\"1.27\" result=\"l\"/><feComposite in=\"l\" in2=\"SourceAlpha\" operator=\"in\"/></filter><filter id=\"ds-plate-pressed\" x=\"-20%\" y=\"-40%\" width=\"140%\" height=\"180%\" primitiveUnits=\"userSpaceOnUse\" color-interpolation-filters=\"sRGB\"><feGaussianBlur in=\"SourceAlpha\" stdDeviation=\"1.3\" result=\"s\"/><feDiffuseLighting in=\"s\" surfaceScale=\"-3.2\" lighting-color=\"#fff\" result=\"d\"><feDistantLight azimuth=\"235\" elevation=\"52\"/></feDiffuseLighting><feComposite in=\"SourceGraphic\" in2=\"d\" operator=\"arithmetic\" k1=\"1.27\" result=\"l\"/><feComposite in=\"l\" in2=\"SourceAlpha\" operator=\"in\"/></filter></defs></svg><span class=\"ds-stamp ds-on\"><svg class=\"ds-plate\" aria-hidden=\"true\"><rect width=\"100%\" height=\"100%\" rx=\"6\" filter=\"url(#ds-plate-raised)\"/></svg>Fixing</span><span class=\"ds-stamp ds-off\"><svg class=\"ds-plate\" aria-hidden=\"true\"><rect width=\"100%\" height=\"100%\" rx=\"6\" filter=\"url(#ds-plate-pressed)\"/></svg>Off</span><span class=\"ds-stamp ds-cue\"><svg class=\"ds-plate\" aria-hidden=\"true\"><rect width=\"100%\" height=\"100%\" rx=\"6\" filter=\"url(#ds-plate-raised)\"/></svg>Snap first</span></div>",
+      "css": ".ds-stamps { display: flex; gap: 12px; align-items: center; } .ds-stamp { position: relative; isolation: isolate; display: inline-flex; align-items: center; padding: 7px 9px 6px; font: 700 11.5px/1 Barlow, ui-sans-serif, system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; } .ds-plate { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; overflow: visible; } .ds-on { color: #1c1c1c; } .ds-on rect { fill: var(--text, #efefef); } .ds-off { color: var(--text-2, #b0b0b0); } .ds-off rect { fill: var(--ground-2, #2a2a2a); } .ds-cue { color: var(--text, #efefef); } .ds-cue rect { fill: var(--ground-3, #333333); }"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "custom",
+      "refersTo": "seg-track",
+      "description": "Native radios styled as a graphite track; checked option inverts to chalk (Before / After).",
+      "html": "<fieldset class=\"ds-seg\"><label><input type=\"radio\" name=\"ds-ab\"><span>Before</span></label><label><input type=\"radio\" name=\"ds-ab\" checked><span>After</span></label></fieldset>",
+      "css": ".ds-seg { display: inline-flex; gap: 4px; margin: 0; padding: 4px; border: 0; border-radius: 13px; background: var(--ground-3, #333333); font-family: Barlow, ui-sans-serif, system-ui, sans-serif; } .ds-seg label { position: relative; display: block; } .ds-seg input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; } .ds-seg span { display: flex; align-items: center; min-height: 38px; padding: 0 14px; border-radius: 9px; font-size: 15px; font-weight: 600; color: var(--text-2, #b0b0b0); transition: background-color 140ms cubic-bezier(0.16, 1, 0.3, 1), color 140ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-seg input:hover + span { color: var(--text, #efefef); } .ds-seg input:checked + span { background: var(--text, #efefef); color: var(--ground, #222222); box-shadow: 0 2px 5px -1px rgb(0 0 0 / 0.55); } .ds-seg input:focus-visible + span { outline: 2.5px solid var(--focus, #f4f5f7); outline-offset: 2px; }"
+    },
+    {
+      "name": "Switch",
+      "kind": "input",
+      "refersTo": "switch",
+      "description": "Native checkbox as a pill; on fills chalk with a ground knob.",
+      "html": "<label class=\"ds-switch\"><input type=\"checkbox\" checked aria-label=\"Swap left and right\"><span></span></label>",
+      "css": ".ds-switch { position: relative; display: inline-flex; } .ds-switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; } .ds-switch span { position: relative; width: 50px; height: 30px; border-radius: 99px; background: var(--ground-3, #333333); border: 1.5px solid var(--line-2, #525252); transition: background-color 160ms cubic-bezier(0.16, 1, 0.3, 1), border-color 160ms; } .ds-switch span::after { content: \"\"; position: absolute; top: 3px; left: 3px; width: 21px; height: 21px; border-radius: 50%; background: var(--text-2, #b0b0b0); transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), background-color 160ms; } .ds-switch input:checked + span { background: var(--text, #efefef); border-color: var(--text, #efefef); } .ds-switch input:checked + span::after { transform: translateX(20px); background: var(--ground, #222222); } .ds-switch input:focus-visible + span { outline: 2.5px solid var(--focus, #f4f5f7); outline-offset: 3px; }"
+    },
+    {
+      "name": "Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Tonal graphite container for the side check and done states; no border, no shadow.",
+      "html": "<section class=\"ds-panel\"><h3>Do the sides match the picture?</h3><p>Swapped. Play the check again to hear the corrected sides.</p></section>",
+      "css": ".ds-panel { display: grid; gap: 10px; padding: 18px 20px; border-radius: 18px; background: var(--ground-2, #2a2a2a); color: var(--text, #efefef); font-family: Barlow, ui-sans-serif, system-ui, sans-serif; } .ds-panel h3 { margin: 0; font-size: 19px; font-weight: 700; line-height: 1.12; } .ds-panel p { margin: 0; font-size: 15px; line-height: 1.55; color: var(--text-2, #b0b0b0); }"
+    },
+    {
+      "name": "Molded Pad Pair",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Signature: cobalt L with tactile dot and vermilion R, letters debossed under one light (simplified static render of relief.js).",
+      "html": "<div class=\"ds-pads\"><svg viewBox=\"0 0 240 140\" aria-hidden=\"true\"><defs><mask id=\"dspl\" maskUnits=\"userSpaceOnUse\" x=\"0\" y=\"0\" width=\"240\" height=\"140\"><rect width=\"240\" height=\"140\" fill=\"rgb(184,184,184)\"/><text x=\"120\" y=\"119\" text-anchor=\"middle\" font-family=\"Barlow, sans-serif\" font-weight=\"800\" font-size=\"140\" fill=\"rgb(115,115,115)\">L</text><circle cx=\"18\" cy=\"18\" r=\"6\" fill=\"#fff\"/></mask><filter id=\"dspf\" filterUnits=\"userSpaceOnUse\" x=\"0\" y=\"0\" width=\"240\" height=\"140\" color-interpolation-filters=\"sRGB\"><feComponentTransfer in=\"SourceAlpha\" result=\"shape\"><feFuncA type=\"linear\" slope=\"2.2\"/></feComponentTransfer><feGaussianBlur in=\"SourceAlpha\" stdDeviation=\"2\" result=\"soft\"/><feDiffuseLighting in=\"soft\" surfaceScale=\"8\" lighting-color=\"#fff\" result=\"d\"><feDistantLight azimuth=\"235\" elevation=\"52\"/></feDiffuseLighting><feComposite in=\"SourceGraphic\" in2=\"d\" operator=\"arithmetic\" k1=\"1.27\" result=\"l\"/><feComposite in=\"l\" in2=\"shape\" operator=\"in\"/></filter></defs><g filter=\"url(#dspf)\"><g mask=\"url(#dspl)\"><rect width=\"240\" height=\"140\" rx=\"28\" fill=\"#2b52d1\"/></g></g></svg><svg viewBox=\"0 0 240 140\" aria-hidden=\"true\"><defs><mask id=\"dspr\" maskUnits=\"userSpaceOnUse\" x=\"0\" y=\"0\" width=\"240\" height=\"140\"><rect width=\"240\" height=\"140\" fill=\"rgb(184,184,184)\"/><text x=\"120\" y=\"119\" text-anchor=\"middle\" font-family=\"Barlow, sans-serif\" font-weight=\"800\" font-size=\"140\" fill=\"rgb(115,115,115)\">R</text></mask></defs><g filter=\"url(#dspf)\"><g mask=\"url(#dspr)\"><rect width=\"240\" height=\"140\" rx=\"28\" fill=\"#c8452e\"/></g></g></svg></div>",
+      "css": ".ds-pads { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 520px; } .ds-pads svg { display: block; width: 100%; height: auto; border-radius: 28px; box-shadow: 0 18px 32px -20px rgb(0 0 0 / 0.8); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Molded L / R",
+    "overview": "The L and R that every listener checks before pressing play are the interface. Two earcup pads, cobalt on the left and vermilion on the right, sit on a neutral graphite ground like a pair of soft-touch headphones laid on a desk. Their letters are debossed at monumental scale and lit by a single light source through real height-map lighting, so the relief comes from light falling on a shape and never from painted bevels. Everything else on the page (the file, the player, the fix list, the reading sections) is quiet graphite and one family of type, so the pads keep the colour and the attention.\n\nThe system is dark only, chosen from the use scene: artists open it late at night next to recording rooms and editing tools. The ground carries a fixed 7% fractal-noise grain so it reads as a material, not a void. Depth is tactile: molded keys you press, plates that stand up when a setting is engaged and sink in when it is off. Motion is rare and physical. The pads are the ears and never move; when the recording is re-routed, the small \"recorded left / recorded right\" tags under them trade places.\n\nIt refuses the dark DAW with a neon waveform and the pastel moon-and-clouds \"sleepy ASMR\" page.",
+    "keyCharacteristics": [
+      "Two molded pads (cobalt L, vermilion R) are the hero and, once a file loads, a sticky meter band.",
+      "Lit SVG relief (feDiffuseLighting and feSpecularLighting on height maps) for every molded surface.",
+      "Neutral graphite ground with a fixed 7% grain; dark only.",
+      "One family, self-hosted Barlow 400 to 800, on one grid.",
+      "Channel colour discipline: blue means left, red means right, purple means sound both share.",
+      "Tags trade places; pads never move."
+    ],
+    "rules": [
+      { "name": "The Ears Rule", "body": "Blue is left and red is right, everywhere: pads, tags, waveform, inline words. A channel colour never decorates anything that is not that channel.", "section": "colors" },
+      { "name": "The Shared Purple Rule", "body": "Purple appears only where both channels carry the same sound (waveform core and pad meters). It is never an accent, a link, or a state colour.", "section": "colors" },
+      { "name": "The Quiet Ground Rule", "body": "Outside the pads and route tags, the interface is graphite and chalk. Engaged and checked states use chalk inversion, not a channel colour.", "section": "colors" },
+      { "name": "The One Family Rule", "body": "Barlow sets everything: letters, captions, buttons, canvas labels. No second face.", "section": "typography" },
+      { "name": "The Monument Rule", "body": "Only the pad letters are monumental. Page headings stay at or below 40px.", "section": "typography" },
+      { "name": "The Real Light Rule", "body": "Relief comes from lighting a height map. No CSS bevels, inset highlight stacks, or text-shadow embossing.", "section": "elevation" },
+      { "name": "The Raised-Engaged Rule", "body": "A plate stands up when its setting is on or applied and sinks in when it is off or not needed.", "section": "elevation" }
+    ],
+    "dos": [
+      "**Do** render every molded surface (pads, socket, keys, plates) through the shared lighting in relief.js with the single light at azimuth 235, elevation 52.",
+      "**Do** keep blue for left, red for right and purple only for shared sound, in every view that shows channels.",
+      "**Do** show engaged settings as raised plates and off settings as pressed plates.",
+      "**Do** move the route tags, never the pads, to show re-routing.",
+      "**Do** use cubic-bezier(0.16, 1, 0.3, 1) for state motion (140 to 180ms on controls, 640ms for the swap, 900ms for meter sweeps) and honour prefers-reduced-motion.",
+      "**Do** keep the 7% grain fixed behind everything, including the sticky band."
+    ],
+    "donts": [
+      "**Don't** add a light theme; the system is dark only by use scene.",
+      "**Don't** fake relief with CSS bevels, inset highlight stacks or text-shadow embossing.",
+      "**Don't** use purple, cobalt or vermilion as a generic accent, link or state colour.",
+      "**Don't** introduce a second typeface or set the pad letters as live HTML text.",
+      "**Don't** use hard offset shadows; shadows under molded objects stay soft and negative-spread.",
+      "**Don't** drift toward the neon-waveform DAW or the pastel sleepy-ASMR page."
+    ]
+  }
+}

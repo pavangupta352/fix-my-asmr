@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fix My ASMR · fix the sound of phone-recorded ASMR</title>
+<meta name="description" content="Free, open-source tool that fixes swapped left and right, hiss, rumble, hum and uneven volume in ASMR recorded on a phone. It runs in your browser and nothing is uploaded.">
+<link rel="canonical" href="https://pavangupta352.github.io/fix-my-asmr/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://pavangupta352.github.io/fix-my-asmr/">
+<meta property="og:image" content="https://pavangupta352.github.io/fix-my-asmr/assets/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A blue L pad and a red R pad with a round Choose a recording button between them.">
+<meta property="og:title" content="Fix My ASMR">
+<meta property="og:description" content="Fix swapped sides, hiss, rumble, hum and uneven volume in phone-recorded ASMR. Runs in your browser; nothing is uploaded.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#16171a">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preload" href="assets/fonts/barlow-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/barlow-500-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+<script type="module" src="app.js"></script>
+</head>
+<body>
+<svg class="sprite" aria-hidden="true" focusable="false">
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" fill="currentColor"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6.5" y="5" width="4" height="14" rx="1.2" fill="currentColor"/><rect x="13.5" y="5" width="4" height="14" rx="1.2" fill="currentColor"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h14m0 0-3.5-3.5M18 8l-3.5 3.5M20 16H6m0 0 3.5-3.5M6 16l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-phones" viewBox="0 0 24 24"><path d="M4 14v-2a8 8 0 0 1 16 0v2M4 14h2.5a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-5Zm16 0h-2.5a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1H19a1 1 0 0 0 1-1v-5Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V4m0 0L8 8m4-4 4 4M7 11H6a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5a2 2 0 0 0-2-2h-1" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3.5H7.5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V8M14 3.5 18.5 8M14 3.5V8h4.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11m0-11-11 11" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><path d="M7 11V8a5 5 0 0 1 10 0v3M6.5 11h11a1.5 1.5 0 0 1 1.5 1.5v6a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 18.5v-6A1.5 1.5 0 0 1 6.5 11Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+
+<a class="skip" href="#main">Skip to the tool</a>
+
+<header class="bar">
+  <a class="brand" href="./" aria-label="Fix My ASMR, home">
+    <svg class="brand-mark" viewBox="0 0 40 24" aria-hidden="true"><rect x="0.5" y="0.5" width="18" height="23" rx="6" fill="var(--l)"/><rect x="21.5" y="0.5" width="18" height="23" rx="6" fill="var(--r)"/><circle cx="6" cy="6" r="1.8" fill="var(--l-ink)"/></svg>
+    <span>Fix My ASMR</span>
+  </a>
+  <nav aria-label="Page sections">
+    <a href="#flipped">Why it sounds flipped</a>
+    <a href="#tips">Record better</a>
+    <a href="#real-3d">Real 3D</a>
+  </nav>
+</header>
+
+<main id="main">
+  <section class="stage" id="stage" data-state="empty" aria-label="Your recording">
+    <div class="pads" id="pads">
+      <div class="pad pad-l" id="pad-l"><span class="lit side" aria-hidden="true"></span><span class="lit both" aria-hidden="true"></span><span class="flash" aria-hidden="true"></span></div>
+      <div class="socket" id="socket">
+        <span class="socket-relief" id="socket-relief" aria-hidden="true"></span>
+        <button class="pick" id="pick" type="button">
+          <span class="pick-face" id="pick-face" aria-hidden="true"></span>
+          <svg aria-hidden="true"><use href="#i-file"/></svg>
+          <span>Choose a recording</span>
+          <small class="drop-line">or drop it here</small>
+          <small>Never uploaded</small>
+        </button>
+      </div>
+      <div class="pad pad-r" id="pad-r"><span class="lit side" aria-hidden="true"></span><span class="lit both" aria-hidden="true"></span><span class="flash" aria-hidden="true"></span></div>
+    </div>
+    <div class="ears">
+      <div class="ear"><span class="ear-name">Left ear</span><span class="slot" id="slot-left"><span class="chip chip-l" id="chip-l">recorded left</span></span></div>
+      <div class="ear"><span class="ear-name">Right ear</span><span class="slot" id="slot-right"><span class="chip chip-r" id="chip-r">recorded right</span></span></div>
+    </div>
+    <p class="sr-only" id="route-live" aria-live="polite"></p>
+
+    <div class="intro" id="intro">
+      <h1>Fixes swapped left and right, hiss, rumble, hum and uneven volume in ASMR recorded on a phone.</h1>
+      <div class="helpers">
+        <p class="hint">Video or audio, any length. The picture stays exactly as it was.</p>
+        <p class="hint ios-only" hidden>On iPhone, pick the video from <strong>Files</strong> to keep full quality. In Photos, tap Share, then Save to Files first.</p>
+        <button class="ghost" id="hp-test" type="button"><svg aria-hidden="true"><use href="#i-phones"/></svg>Test your headphones</button>
+        <p class="sr-only" id="hp-live" aria-live="polite"></p>
+      </div>
+    </div>
+    <input id="file" type="file" accept="video/*,audio/*,.mov,.mp4,.m4v,.m4a,.wav,.mp3,.aac,.flac,.ogg,.opus,.webm,.mkv" hidden>
+  </section>
+
+  <section class="work" id="work" hidden aria-label="Fixes">
+    <div class="filecard">
+      <div class="file-meta">
+        <h2 id="file-name">Recording</h2>
+        <p id="file-facts" class="facts"></p>
+      </div>
+      <button class="ghost" id="another" type="button">Choose another</button>
+    </div>
+
+    <div class="progress" id="progress" hidden>
+      <p class="progress-label" id="progress-label" aria-live="polite">Checking the sound…</p>
+      <div class="meter" role="progressbar" aria-labelledby="progress-label" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-bar"><span></span></div>
+      <button class="ghost small" id="cancel" type="button" hidden>Cancel</button>
+    </div>
+
+    <p class="error" id="error" role="alert" hidden></p>
+
+    <div class="desk" id="desk" hidden>
+      <div class="col-media">
+        <div class="screen" id="screen">
+          <div class="audio-only" id="audio-only" hidden><span>Audio only</span></div>
+        </div>
+        <div class="transport">
+          <button class="round" id="play" type="button" aria-label="Play"><svg aria-hidden="true"><use href="#i-play"/></svg></button>
+          <span class="time" id="time">0:00</span>
+          <fieldset class="seg ab">
+            <legend class="sr-only">Listen to</legend>
+            <label><input type="radio" name="ab" value="before"><span>Before</span></label>
+            <label><input type="radio" name="ab" value="after" checked><span>After</span></label>
+          </fieldset>
+        </div>
+        <div class="timeline" id="timeline">
+          <canvas id="tl-canvas" aria-hidden="true"></canvas>
+          <input class="scrub" id="scrub" type="range" min="0" max="1000" step="1" value="0" aria-label="Playback position. The timeline shows left and right levels over time.">
+          <span class="playhead" id="playhead" aria-hidden="true"></span>
+          <div class="marks" id="marks"></div>
+        </div>
+        <ol class="mark-list" id="mark-list" hidden></ol>
+      </div>
+
+      <div class="col-fixes">
+        <div class="sides" id="sides">
+          <h3>Do the sides match the picture?</h3>
+          <p id="sides-text">Play a moment where a sound happens on one side. Watch where it happens in the picture and listen for which ear you hear it in.</p>
+          <div class="sides-actions">
+            <button class="ghost" id="sides-play" type="button"><svg aria-hidden="true"><use href="#i-play"/></svg>Play a side check</button>
+            <span class="sides-answer" id="sides-answer" hidden>
+              <button class="choice" id="sides-same" type="button">Same side</button>
+              <button class="choice" id="sides-opposite" type="button">Opposite side</button>
+            </span>
+          </div>
+        </div>
+
+        <ul class="fixes" id="fixes" aria-label="What gets fixed"></ul>
+
+        <details class="adjust" id="adjust">
+          <summary>Adjust everything</summary>
+          <div class="adjust-body" id="adjust-body"></div>
+        </details>
+
+        <div class="save" id="save">
+          <button class="primary" id="go" type="button"><svg aria-hidden="true"><use href="#i-down"/></svg><span id="go-label">Fix and save</span></button>
+          <p class="save-note" id="save-note"></p>
+        </div>
+
+        <div class="done" id="done" hidden>
+          <h3 id="done-title">Saved</h3>
+          <p id="done-text"></p>
+          <div class="next-time" id="next-time" hidden>
+            <h4>For your next recording</h4>
+            <ul></ul>
+          </div>
+          <div class="done-actions">
+            <button class="primary" id="share" type="button" hidden><svg aria-hidden="true"><use href="#i-share"/></svg>Save to Photos or share</button>
+            <a class="ghost button" id="download" download hidden><svg aria-hidden="true"><use href="#i-down"/></svg>Download</a>
+            <button class="ghost" id="again" type="button">Fix another</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="read" id="flipped">
+    <h2>Why it can sound flipped</h2>
+    <div class="read-cols">
+      <div>
+        <p>An iPhone records stereo from the camera's point of view. With the back camera facing you, your <span class="ch-r">right hand</span> shows up on the <span class="ch-l">left of the picture</span> and is heard in the <span class="ch-l">left ear</span>. That's correct for anyone watching, and it's the same rule binaural ASMR mics follow. It only feels flipped if you think of it as your own right.</p>
+        <p>The selfie camera adds one more trap: its preview is mirrored, but the saved video and its sound are not. Always judge from playback.</p>
+        <p>The side check above settles it. Listen on wired headphones, not head-tracked AirPods: if each sound comes from the same side as in the picture, nothing is wrong.</p>
+      </div>
+      <div>
+        <h3>When it really is swapped</h3>
+        <ul class="plain">
+          <li>The video was shot flat or overhead and later rotated in an editor. Rotating the picture never moves the sound.</li>
+          <li>The picture was mirrored after recording, so the sound no longer matches.</li>
+          <li>A recording app set its stereo direction wrong, or an external stereo mic was plugged in the other way round.</li>
+        </ul>
+        <p>Fix My ASMR swaps the sides back, and keeps them matched if you rotate or mirror the picture under Adjust.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="read" id="tips">
+    <h2>Record better next time</h2>
+    <p class="read-lede">iPhone settings that protect quiet triggers. Paths are from iOS 26 and 27.</p>
+    <ul class="tips">
+      <li><span class="stamp" data-s="set">Stereo</span><p><strong>Record Sound.</strong> Settings, Camera, Record Sound. Spatial Audio is the default. It adds a second four-channel track that many editors mishandle, and some iPhone 17 owners report hum or beeping in Spatial clips.</p></li>
+      <li><span class="stamp" data-s="set">Off</span><p><strong>Wind Noise Reduction.</strong> Same screen. It uses machine learning and can remove breath and blowing sounds.</p></li>
+      <li><span class="stamp" data-s="set">Off</span><p><strong>Audio Zoom.</strong> Same screen, iOS 26.4 and later. It can make the background level pulse when you reframe.</p></li>
+      <li><span class="stamp" data-s="set">Wide Spectrum</span><p><strong>Mic Mode.</strong> Control Center, with the Camera open. Never Voice Isolation: since iOS 26 it works in the Camera app, stays on once picked, and permanently removes sounds that aren't voice. Check it before each session.</p></li>
+      <li><span class="stamp" data-s="set">Standard</span><p><strong>Audio Mix.</strong> In-Frame, Studio and Cinematic treat everything except speech as background, and in ASMR that background is the triggers.</p></li>
+      <li><span class="stamp" data-s="set">On</span><p><strong>Rotation lock.</strong> Film in landscape, upright on a stand. Set it before you press record and don't turn it mid-take. Left and right follow how the phone is held, and lying flat gives it nothing to go on.</p></li>
+      <li><span class="stamp" data-s="set">On</span><p><strong>Airplane Mode.</strong> Or a Focus, with AirPods disconnected, so calls, notifications and device switching don't interrupt the take.</p></li>
+      <li><span class="stamp" data-s="set">Off</span><p><strong>HDR Video, for TikTok.</strong> Settings, Camera, Record Video. TikTok can wash HDR out; Instagram and YouTube handle it.</p></li>
+      <li><span class="stamp" data-s="set">Off</span><p><strong>YouTube auto-dubbing.</strong> Auto-dubbed language tracks play a synthetic voice at normal loudness over a whisper video.</p></li>
+      <li><span class="stamp" data-s="cue">Snap first</span><p><strong>Start each take with a snap.</strong> Arm out to your right, snap, then the left. The side check here will find it and confirm the sides in seconds.</p></li>
+      <li><span class="stamp" data-s="cue">Ports clear</span><p><strong>Keep the mic holes clear.</strong> A case, a mount clamp or a finger can muffle one side.</p></li>
+      <li><span class="stamp" data-s="cue">Hand's width</span><p><strong>Keep loud triggers back.</strong> Tapping right next to a mic distorts, and distortion can't be removed later.</p></li>
+      <li><span class="stamp" data-s="cue">AirDrop</span><p><strong>Move files without re-compressing.</strong> Use AirDrop, Files or a cable. Chat apps and "Most Compatible" exports re-compress the video.</p></li>
+      <li><span class="stamp" data-s="cue">Free app</span><p><strong>Want manual control?</strong> Blackmagic Camera records uncompressed audio and lets you choose the mic and stereo mode.</p></li>
+    </ul>
+  </section>
+
+  <section class="read" id="real-3d">
+    <h2>Getting real 3D sound</h2>
+    <div class="read-cols">
+      <div>
+        <p>Your ears hear direction from the tiny delay between them, from your head shading high sounds, and from the shape of your outer ear. A phone's mics have no head or ears between them, so phone stereo sounds wider than mono but never truly 3D. The 3D width option here adds a little head-like spread to high sounds. It helps, but it isn't binaural.</p>
+      </div>
+      <div>
+        <p>For real binaural sound, record through a mic with two ears. Options that work with a USB-C iPhone include the Sound Professionals USB-C binaural bundle (from about $105), in-ear binaural mics such as the Roland CS-10EM with a plug-in-power interface, and the 3Dio Free Space ($449) with a USB-C audio interface. Prices were checked in October 2026. Record with Blackmagic Camera set to stereo.</p>
+        <p>If you keep Spatial Audio on, a Mac can render that extra track to binaural with Apple's own afconvert tool. Nothing outside Apple can decode it yet.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <p>Fix My ASMR is free and open source (MIT). Your recordings are processed on your own device and never uploaded.</p>
+  <p>Built with <a href="https://mediabunny.dev">Mediabunny</a> (MPL-2.0) for reading and writing video files.</p>
+</footer>
+
+<div class="dropveil" id="dropveil" hidden><p>Drop it to check the sound</p></div>
+</body>
+</html>

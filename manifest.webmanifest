@@ -1,0 +1,15 @@
+{
+  "name": "Fix My ASMR",
+  "short_name": "Fix My ASMR",
+  "description": "Fix swapped sides, hiss, rumble, hum and uneven volume in phone-recorded ASMR. Runs on your device.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#16171a",
+  "theme_color": "#16171a",
+  "icons": [
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
