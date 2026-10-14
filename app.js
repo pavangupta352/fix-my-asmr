@@ -160,8 +160,7 @@ async function onEngine({ data }) {
     }
     keepAwake(false);
     if (S.saving) endSave();
-    if (data.stack) console.error('Fix My ASMR engine:', data.stack);
-    showError(friendlyError(data.message, data.stage));
+    showError(friendlyError(data.message, data.stage, data.stack));
   }
 }
 
@@ -178,7 +177,7 @@ async function decodeFallback(rate) {
   } catch { return false; }
 }
 
-function friendlyError(msg, stage) {
+function friendlyError(msg, stage, stack) {
   if (/unsupported-file/.test(msg)) {
     return /\.avi$/i.test(S?.file?.name || '')
       ? 'AVI files can’t be opened in a browser. Convert it to MP4 first (HandBrake does this for free), then try again.'
@@ -196,7 +195,7 @@ function friendlyError(msg, stage) {
   if (/cannot-convert: video/.test(msg)) return 'This browser can’t make that kind of video. Choose Same format or Smaller MP4 under Save as, or try Chrome or Safari.';
   if (/cannot-convert/.test(msg)) return "This browser can't write the fixed file. Try a current version of Chrome or Safari.";
   if (/quota|QuotaExceeded|space/i.test(msg)) return 'There isn’t enough free storage on this device for the fixed copy. Free up some space and try again.';
-  console.error('Fix My ASMR:', msg);
+  console.error('Fix My ASMR:', msg, stack || '');
   return stage === 'export'
     ? 'Saving stopped before it finished. Try again, or choose Same format under Save as.'
     : 'This recording couldn’t be checked. Try again, or try another copy of the file.';
