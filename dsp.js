@@ -36,6 +36,21 @@ export function notch(fs, f0, q) {
   const w = (2 * Math.PI * f0) / fs, c = Math.cos(w), al = Math.sin(w) / (2 * q), a0 = 1 + al;
   return [1 / a0, (-2 * c) / a0, 1 / a0, (-2 * c) / a0, (1 - al) / a0];
 }
+export function lowShelf(fs, f0, gainDb) {
+  const A = Math.pow(10, gainDb / 40), w = (2 * Math.PI * f0) / fs, c = Math.cos(w), al = Math.sin(w) / Math.SQRT2, r = 2 * Math.sqrt(A) * al;
+  const a0 = A + 1 + (A - 1) * c + r;
+  return [(A * (A + 1 - (A - 1) * c + r)) / a0, (2 * A * (A - 1 - (A + 1) * c)) / a0, (A * (A + 1 - (A - 1) * c - r)) / a0, (-2 * (A - 1 + (A + 1) * c)) / a0, (A + 1 + (A - 1) * c - r) / a0];
+}
+export function highShelf(fs, f0, gainDb) {
+  const A = Math.pow(10, gainDb / 40), w = (2 * Math.PI * f0) / fs, c = Math.cos(w), al = Math.sin(w) / Math.SQRT2, r = 2 * Math.sqrt(A) * al;
+  const a0 = A + 1 - (A - 1) * c + r;
+  return [(A * (A + 1 + (A - 1) * c + r)) / a0, (-2 * A * (A - 1 + (A + 1) * c)) / a0, (A * (A + 1 + (A - 1) * c - r)) / a0, (2 * (A - 1 - (A + 1) * c)) / a0, (A + 1 - (A - 1) * c - r) / a0];
+}
+export function peaking(fs, f0, gainDb, q) {
+  const A = Math.pow(10, gainDb / 40), w = (2 * Math.PI * f0) / fs, c = Math.cos(w), al = Math.sin(w) / (2 * q), a0 = 1 + al / A;
+  return [(1 + al * A) / a0, (-2 * c) / a0, (1 - al * A) / a0, (-2 * c) / a0, (1 - al / A) / a0];
+}
+
 // ITU-R BS.1770 K-weighting, valid at any sample rate (same formulas as libebur128).
 export function kWeighting(fs) {
   let f0 = 1681.974450955533, G = 3.999843853973347, Q = 0.7071752369554196;
@@ -143,6 +158,25 @@ export class Analyzer {
     this.decAcc = 0; this.decN = 0; this.gzN = 0; this.gzMs = 0;
     this.gzLen = Math.round(fs / this.dec);
     this.humWins = [];
+    // Slate snap: the first sharp, loud transient in the opening 15 s (10 ms windows).
+    this.snapWin = Math.round(fs / 100);
+    this.snapAcc = [0, 0, 0]; this.snapN = 0; this.snapWins = 0; this.snapFloor = Infinity; this.snap = null;
+  }
+
+  snapCheck(l, r, al, ar) {
+    const a = this.snapAcc;
+    a[0] += l * l; a[1] += r * r; if (al > a[2]) a[2] = al; if (ar > a[2]) a[2] = ar;
+    if (++this.snapN < this.snapWin) return;
+    const e = (a[0] + a[1]) / (2 * this.snapN);
+    // A snap jumps more than 25 dB over the quiet level of at least 0.2 s before it and peaks
+    // above -30 dBFS. Sound that is already there when the recording starts doesn't count.
+    if (!this.snap && this.snapWins >= 20 && e > Math.max(this.snapFloor, 1e-10) * 316 && a[2] > 0.03) {
+      const ild = powDb(a[0] / (a[1] + 1e-24));
+      this.snap = { t: (this.frames + 1 - this.snapN) / this.fs, ild: Math.max(-60, Math.min(60, ild)) };
+    }
+    this.snapFloor = e < this.snapFloor ? e : this.snapFloor * 0.92 + e * 0.08;
+    this.snapWins++;
+    a.fill(0); this.snapN = 0;
   }
 
   goertzel(l, r) {
@@ -190,6 +224,7 @@ export class Analyzer {
       if (ar > acc[10]) acc[10] = ar;
       this.clipCheck(0, al); this.clipCheck(1, ar);
       this.goertzel(l, r);
+      if (this.frames < this.fs * 15) this.snapCheck(l, r, al, ar);
       ring[0][this.ringPos] = l; ring[1][this.ringPos] = r;
       this.ringPos = (this.ringPos + 1) & (N_FFT - 1);
       if (++this.sinceFrame === N_FFT / 2) { this.sinceFrame = 0; this.spectrum(); }
@@ -234,6 +269,24 @@ export class Analyzer {
     this.bucketCount[b]++;
     const off = b * (N_FFT / 2 + 1), sL = this.bucketSum[0], sR = this.bucketSum[1];
     for (let k = 0; k <= N_FFT / 2; k++) { sL[off + k] += pL[k]; sR[off + k] += pR[k]; }
+  }
+
+  // Highest frequency that still carries real energy during the loudest frames. Bluetooth
+  // and AirPods mics cut everything above ~8 kHz, which is where whisper and crinkle detail lives.
+  bandwidth() {
+    const nb = N_FFT / 2 + 1, total = this.bucketCount.reduce((a, b) => a + b, 0);
+    if (!total) return null;
+    let cum = 0, from = 140;
+    for (; from > 0; from--) { cum += this.bucketCount[from]; if (cum >= total * 0.3) break; }
+    const spec = new Float64Array(nb);
+    for (let b = from; b <= 140; b++) for (let k = 0; k < nb; k++) spec[k] += this.bucketSum[0][b * nb + k] + this.bucketSum[1][b * nb + k];
+    const hz = (k) => (k * this.fs) / N_FFT;
+    let peak = 0;
+    for (let k = 1; k < nb; k++) if (hz(k) > 300 && hz(k) < 4000 && spec[k] > peak) peak = spec[k];
+    if (!peak) return null;
+    let top = 0;
+    for (let k = 1; k < nb; k++) if (spec[k] > peak * 1e-5) top = hz(k); // within 50 dB of the main band
+    return { topHz: Math.round(top), narrow: this.fs < 32000 || top < 9000 };
   }
 
   finish() {
@@ -301,6 +354,10 @@ export class Analyzer {
     moments.sort((a, b) => Math.abs(b.ild) * b.level - Math.abs(a.ild) * a.level);
     const picks = [];
     for (const m of moments) { if (picks.every((p) => Math.abs(p.t - m.t) > 5)) picks.push(m); if (picks.length === 6) break; }
+    // Stretches of near-digital silence (below -85 dBFS) between sounds. Real mics always hiss a
+    // little, so many separate ones point to Voice Isolation or another noise gate.
+    let gaps = 0, silent = 0, inGap = false;
+    for (const v of rms) { const s = v < 5.6e-5; if (s) silent++; if (s && !inGap) gaps++; inGap = s; }
     const lfRms = Math.sqrt(mean(tl.map((t) => t[4] * t[4])));
     const fullRms = Math.sqrt(mean(tl.map((t) => (t[2] * t[2] + t[3] * t[3]) / 2)));
     return {
@@ -321,6 +378,9 @@ export class Analyzer {
       // per 100 ms: peak L, peak R, rms L, rms R, how alike the two sides are (-1..1)
       timeline: tl.map((t) => [t[0], t[1], t[2], t[3], Math.max(-1, Math.min(1, t[5] / (t[2] * t[3] + 1e-24)))]),
       pumping: pumping(rms, floorDb),
+      snap: this.snap,
+      bandwidth: this.bandwidth(),
+      gated: { gaps, share: rms.length ? silent / rms.length : 0 },
     };
   }
 }
@@ -426,11 +486,12 @@ export class Denoiser {
 // exponential attack that lands before the peak leaves the delay line, slow release.
 export class Limiter {
   constructor(fs, ceilingDb = -1, lookaheadMs = 5, releaseMs = 150) {
+    // Delay line of `la` samples; the gain for each outgoing sample is the minimum needed over
+    // that sample and the `la` samples after it.
     this.la = Math.max(1, Math.round((fs * lookaheadMs) / 1000));
-    this.size = this.la + 1;
     this.ceil = fromDb(ceilingDb);
-    this.dL = new Float32Array(this.size); this.dR = new Float32Array(this.size);
-    this.qv = new Float64Array(this.size + 1); this.qi = new Float64Array(this.size + 1);
+    this.dL = new Float32Array(this.la); this.dR = new Float32Array(this.la);
+    this.qv = new Float64Array(this.la + 2); this.qi = new Float64Array(this.la + 2);
     this.qh = 0; this.qt = 0; this.t = 0;
     this.env = 1;
     this.att = Math.exp(-4 / this.la);
@@ -439,7 +500,7 @@ export class Limiter {
     this.reduction = 0; // deepest gain reduction since last read, in dB
   }
   process(L, R, n) {
-    const { size, ceil, dL, dR, qv, qi, att, rel } = this, cap = qv.length;
+    const { la, ceil, dL, dR, qv, qi, att, rel } = this, cap = qv.length;
     let env = this.env, minEnv = 1;
     for (let i = 0; i < n; i++) {
       const l = L[i], r = R[i];
@@ -448,11 +509,11 @@ export class Limiter {
       // monotonic deque of (gain, time) for the window minimum
       while (this.qt !== this.qh && qv[(this.qt - 1 + cap) % cap] >= req) this.qt = (this.qt - 1 + cap) % cap;
       qv[this.qt] = req; qi[this.qt] = t; this.qt = (this.qt + 1) % cap;
-      while (qi[this.qh] <= t - size) this.qh = (this.qh + 1) % cap;
+      while (qi[this.qh] < t - la) this.qh = (this.qh + 1) % cap;
       const target = qv[this.qh];
       env = target < env ? target + (env - target) * att : target + (env - target) * rel;
       if (env < minEnv) minEnv = env;
-      const k = t % size;
+      const k = t % la;
       let ol = dL[k] * env, or = dR[k] * env;
       dL[k] = l; dR[k] = r;
       if (ol > ceil) ol = ceil; else if (ol < -ceil) ol = -ceil;
@@ -490,6 +551,11 @@ export const DEFAULTS = {
   hissSens: 8,          // how far above the hiss a sound must be to pass untouched, dB
   width: 0,             // 0..1 extra stereo width in the highs
   gainDb: 0,            // static gain (loudness match)
+  eqLow: 0,             // warmth: low shelf at 150 Hz, dB
+  eqMid: 0,             // clarity: presence peak at 3.2 kHz, dB
+  eqHigh: 0,            // air: high shelf at 9 kHz, dB
+  deess: 0,             // soften harsh S sounds: 0 off, 1 gentle, 2 strong
+  monoWiden: 0,         // 0..1 spread for near-mono recordings (decorrelated highs)
   limit: true,          // peak limiter at -1 dBFS
 };
 
@@ -508,6 +574,10 @@ export class Chain {
     this.hp = [[], []];
     this.hum = [[], []];
     this.wHp = [new Biquad(), new Biquad()]; // side-signal high-pass for width
+    this.eq = [0, 1].map(() => [new Biquad(), new Biquad(), new Biquad()]);
+    this.ds = { lp: [0, 0], eh: [0, 0], ef: [0, 0], g: 1 };
+    this.mw = { hp: new Biquad(highpass(fs, 300, Math.SQRT1_2)), ap: new Float64Array(8), k: [0.62, -0.38, 0.27, -0.71] };
+    this.bufM = new Float32Array(4096);
     this.m = [1, 0, 0, 1]; // current 2x2 channel matrix (L' = m0 L + m1 R, R' = m2 L + m3 R)
     this.g = 1; this.w = 0;
     this.bufS = new Float32Array(4096);
@@ -530,6 +600,8 @@ export class Chain {
       this.hum = [0, 1].map(() => q.humHz ? [1, 2, 3, 4].filter((h) => q.humHz * h < fs / 2).map((h) => new Biquad(notch(fs, q.humHz * h, 30))) : []);
     }
     this.den.setAmount(q.hissDb, q.hissSens);
+    for (const ch of this.eq) { ch[0].set(lowShelf(fs, 150, q.eqLow)); ch[1].set(peaking(fs, 3200, q.eqMid, 0.8)); ch[2].set(highShelf(fs, 9000, q.eqHigh)); }
+    this.eqOn = q.eqLow !== 0 || q.eqMid !== 0 || q.eqHigh !== 0;
     for (const b of this.wHp) b.set(highpass(fs, 700, Math.SQRT1_2));
     this.mTarget = this.matrix(q);
     this.gTarget = fromDb(q.gainDb);
@@ -543,6 +615,49 @@ export class Chain {
     // trims apply to the output sides, polarity flip to the output right side
     return [m[0] * tl, m[1] * tl, m[2] * tr * s, m[3] * tr * s];
   }
+  // Split each side at ~4.5 kHz (one-pole, so the bands sum back exactly). When the top band
+  // dominates the whole signal, as on a harsh "s", turn just the top band down for that moment.
+  deEss(L, R, n) {
+    const ds = this.ds, fs = this.fs, strong = this.p.deess > 1;
+    const k = strong ? 0.32 : 0.42, floor = fromDb(strong ? -10 : -6);
+    const a = 1 - Math.exp((-2 * Math.PI * 4500) / fs);
+    const atk = Math.exp(-1 / (fs * 0.001)), rel = Math.exp(-1 / (fs * 0.06)), grel = Math.exp(-1 / (fs * 0.04));
+    let g = ds.g;
+    for (let i = 0; i < n; i++) {
+      let ratio = 0;
+      const lo = [0, 0], hi = [0, 0];
+      for (let c = 0; c < 2; c++) {
+        const x = c ? R[i] : L[i];
+        ds.lp[c] += a * (x - ds.lp[c]);
+        lo[c] = ds.lp[c]; hi[c] = x - ds.lp[c];
+        const ah = hi[c] < 0 ? -hi[c] : hi[c], af = x < 0 ? -x : x;
+        ds.eh[c] = ah > ds.eh[c] ? ah + (ds.eh[c] - ah) * atk : ah + (ds.eh[c] - ah) * rel;
+        ds.ef[c] = af > ds.ef[c] ? af + (ds.ef[c] - af) * atk : af + (ds.ef[c] - af) * rel;
+        if (ds.eh[c] > 0.003) ratio = Math.max(ratio, ds.eh[c] / (ds.ef[c] + 1e-9));
+      }
+      const target = ratio > k ? Math.max(floor, Math.pow(k / ratio, 1.5)) : 1;
+      g = target < g ? target : target + (g - target) * grel;
+      L[i] = lo[0] + g * hi[0];
+      R[i] = lo[1] + g * hi[1];
+    }
+    ds.g = g;
+  }
+
+  // For near-mono recordings: add a side signal made from the mid's highs through a chain of
+  // all-pass filters. Left and right differ only in that side signal, so the mono sum is unchanged.
+  widenMono(L, R, n) {
+    const mw = this.mw, d = this.p.monoWiden * 0.6;
+    const M = this.bufM.length < n ? (this.bufM = new Float32Array(n)) : this.bufM;
+    for (let i = 0; i < n; i++) M[i] = (L[i] + R[i]) / 2;
+    mw.hp.run(M, n);
+    const st = mw.ap, k = mw.k;
+    for (let i = 0; i < n; i++) {
+      let x = M[i];
+      for (let j = 0; j < 4; j++) { const y = -k[j] * x + st[j * 2] + k[j] * st[j * 2 + 1]; st[j * 2] = x; st[j * 2 + 1] = y; x = y; }
+      L[i] += d * x; R[i] -= d * x;
+    }
+  }
+
   process(L, R, n) {
     // channel matrix, ramped so toggling Swap mid-playback doesn't click
     const m = this.m, mt = this.mTarget;
@@ -557,6 +672,9 @@ export class Chain {
     for (const b of this.hum[0]) b.run(L, n);
     for (const b of this.hum[1]) b.run(R, n);
     this.den.process(L, R, n);
+    if (this.eqOn) for (let c = 0; c < 2; c++) for (const b of this.eq[c]) b.run(c ? R : L, n);
+    if (this.p.deess) this.deEss(L, R, n);
+    if (this.p.monoWiden > 0) this.widenMono(L, R, n);
     // Width: add extra side signal above ~700 Hz (head-shadow-like cue); mid untouched.
     const wt = this.p.width;
     if (wt > 0 || this.w > 0) {

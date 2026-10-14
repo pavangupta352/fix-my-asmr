@@ -83,7 +83,7 @@
         <p class="sr-only" id="hp-live" aria-live="polite"></p>
       </div>
     </div>
-    <input id="file" type="file" accept="video/*,audio/*,.mov,.mp4,.m4v,.m4a,.wav,.mp3,.aac,.flac,.ogg,.opus,.webm,.mkv" hidden>
+    <input id="file" type="file" accept="video/*,audio/*,.mov,.mp4,.m4v,.m4a,.wav,.aif,.aiff,.aifc,.caf,.mp3,.aac,.flac,.ogg,.opus,.webm,.mkv" hidden>
   </section>
 
   <section class="work" id="work" hidden aria-label="Fixes">
@@ -120,6 +120,8 @@
         <div class="timeline" id="timeline">
           <canvas id="tl-canvas" aria-hidden="true"></canvas>
           <input class="scrub" id="scrub" type="range" min="0" max="1000" step="1" value="0" aria-label="Playback position. The timeline shows left and right levels over time.">
+          <span class="trim-shade trim-a" id="trim-a" aria-hidden="true" hidden></span>
+          <span class="trim-shade trim-b" id="trim-b" aria-hidden="true" hidden></span>
           <span class="playhead" id="playhead" aria-hidden="true"></span>
           <div class="marks" id="marks"></div>
         </div>
@@ -130,6 +132,7 @@
         <div class="sides" id="sides">
           <h3>Do the sides match the picture?</h3>
           <p id="sides-text">Play a moment where a sound happens on one side. Watch where it happens in the picture and listen for which ear you hear it in.</p>
+          <p class="sides-hint" id="sides-hint" hidden></p>
           <div class="sides-actions">
             <button class="ghost" id="sides-play" type="button"><svg aria-hidden="true"><use href="#i-play"/></svg>Play a side check</button>
             <span class="sides-answer" id="sides-answer" hidden>
@@ -145,6 +148,8 @@
           <summary>Adjust everything</summary>
           <div class="adjust-body" id="adjust-body"></div>
         </details>
+
+        <div class="saveas" id="saveas"></div>
 
         <div class="save" id="save">
           <button class="primary" id="go" type="button"><svg aria-hidden="true"><use href="#i-down"/></svg><span id="go-label">Fix and save</span></button>
@@ -173,7 +178,7 @@
     <div class="read-cols">
       <div>
         <p>An iPhone records stereo from the camera's point of view. With the back camera facing you, your <span class="ch-r">right hand</span> shows up on the <span class="ch-l">left of the picture</span> and is heard in the <span class="ch-l">left ear</span>. That's correct for anyone watching, and it's the same rule binaural ASMR mics follow. It only feels flipped if you think of it as your own right.</p>
-        <p>The selfie camera adds one more trap: its preview is mirrored, but the saved video and its sound are not. Always judge from playback.</p>
+        <p>The selfie camera adds one more trap: its preview is mirrored, but the saved video and its sound are not (unless Mirror Front Camera is on). Always judge from playback.</p>
         <p>The side check above settles it. Listen on wired headphones, not head-tracked AirPods: if each sound comes from the same side as in the picture, nothing is wrong.</p>
       </div>
       <div>
@@ -191,20 +196,35 @@
   <section class="read" id="tips">
     <h2>Record better next time</h2>
     <p class="read-lede">iPhone settings that protect quiet triggers. Paths are from iOS 26 and 27.</p>
+    <h3 class="tips-head">Sound</h3>
     <ul class="tips">
       <li><span class="stamp" data-s="set">Stereo</span><p><strong>Record Sound.</strong> Settings, Camera, Record Sound. Spatial Audio is the default. It adds a second four-channel track that many editors mishandle, and some iPhone 17 owners report hum or beeping in Spatial clips.</p></li>
       <li><span class="stamp" data-s="set">Off</span><p><strong>Wind Noise Reduction.</strong> Same screen. It uses machine learning and can remove breath and blowing sounds.</p></li>
       <li><span class="stamp" data-s="set">Off</span><p><strong>Audio Zoom.</strong> Same screen, iOS 26.4 and later. It can make the background level pulse when you reframe.</p></li>
       <li><span class="stamp" data-s="set">Wide Spectrum</span><p><strong>Mic Mode.</strong> Control Center, with the Camera open. Never Voice Isolation: since iOS 26 it works in the Camera app, stays on once picked, and permanently removes sounds that aren't voice. Check it before each session.</p></li>
       <li><span class="stamp" data-s="set">Standard</span><p><strong>Audio Mix.</strong> In-Frame, Studio and Cinematic treat everything except speech as background, and in ASMR that background is the triggers.</p></li>
+    </ul>
+    <h3 class="tips-head">Picture</h3>
+    <ul class="tips">
+      <li><span class="stamp" data-s="set">Off</span><p><strong>Auto FPS.</strong> Settings, Camera, Record Video. In dim light it drops the video to 24 fps partway through a take, and some editors then drift out of sync. Add light instead.</p></li>
+      <li><span class="stamp" data-s="set">On</span><p><strong>Lock Camera.</strong> Same screen. Stops the iPhone switching lenses mid-take when your hands come close. iPhone Air doesn't have it.</p></li>
+      <li><span class="stamp" data-s="set">On</span><p><strong>Macro Control.</strong> Settings, Camera. It adds a macro button to the camera: tap it off so the view doesn't jump lenses when you lean in. Preserve Settings, Macro Control keeps it off.</p></li>
+      <li><span class="stamp" data-s="set">Off</span><p><strong>Enhanced Stabilization.</strong> Settings, Camera, Record Video. On a stand you don't need it, and it crops the picture slightly.</p></li>
+      <li><span class="stamp" data-s="set">On</span><p><strong>Lock White Balance.</strong> Same screen. Colours stay put when your hands or props move through the shot.</p></li>
+      <li><span class="stamp" data-s="cue">Hold to lock</span><p><strong>Lock focus and exposure.</strong> Touch and hold where your hands will be until AE/AF Lock appears, so focus and brightness don't hunt as you move.</p></li>
+      <li><span class="stamp" data-s="set">Off</span><p><strong>Mirror Front Camera.</strong> Settings, Camera. It can save selfie shots mirrored, so text reads backwards. If you flip a clip later, the sound has to swap too; Adjust here does both.</p></li>
+      <li><span class="stamp" data-s="set">Off</span><p><strong>HDR Video, for TikTok.</strong> Settings, Camera, Record Video. TikTok can wash HDR out; Instagram and YouTube handle it. Or keep it on and save with TikTok &amp; Reels here, which converts it.</p></li>
+    </ul>
+    <h3 class="tips-head">Habits</h3>
+    <ul class="tips">
       <li><span class="stamp" data-s="set">On</span><p><strong>Rotation lock.</strong> Film in landscape, upright on a stand. Set it before you press record and don't turn it mid-take. Left and right follow how the phone is held, and lying flat gives it nothing to go on.</p></li>
       <li><span class="stamp" data-s="set">On</span><p><strong>Airplane Mode.</strong> Or a Focus, with AirPods disconnected, so calls, notifications and device switching don't interrupt the take.</p></li>
-      <li><span class="stamp" data-s="set">Off</span><p><strong>HDR Video, for TikTok.</strong> Settings, Camera, Record Video. TikTok can wash HDR out; Instagram and YouTube handle it.</p></li>
-      <li><span class="stamp" data-s="set">Off</span><p><strong>YouTube auto-dubbing.</strong> Auto-dubbed language tracks play a synthetic voice at normal loudness over a whisper video.</p></li>
-      <li><span class="stamp" data-s="cue">Snap first</span><p><strong>Start each take with a snap.</strong> Arm out to your right, snap, then the left. The side check here will find it and confirm the sides in seconds.</p></li>
+      <li><span class="stamp" data-s="cue">Snap first</span><p><strong>Start each take with a snap.</strong> Arm out to your right, snap, then the left. The side check here finds it and confirms the sides in seconds, and Adjust can cut it off.</p></li>
       <li><span class="stamp" data-s="cue">Ports clear</span><p><strong>Keep the mic holes clear.</strong> A case, a mount clamp or a finger can muffle one side.</p></li>
       <li><span class="stamp" data-s="cue">Hand's width</span><p><strong>Keep loud triggers back.</strong> Tapping right next to a mic distorts, and distortion can't be removed later.</p></li>
+      <li><span class="stamp" data-s="cue">Wired mic</span><p><strong>Skip Bluetooth mics.</strong> AirPods and other Bluetooth headsets record narrow, phone-call sound. Use the iPhone's own mics or a wired mic.</p></li>
       <li><span class="stamp" data-s="cue">AirDrop</span><p><strong>Move files without re-compressing.</strong> Use AirDrop, Files or a cable. Chat apps and "Most Compatible" exports re-compress the video.</p></li>
+      <li><span class="stamp" data-s="set">Off</span><p><strong>YouTube auto-dubbing.</strong> Auto-dubbed language tracks play a synthetic voice at normal loudness over a whisper video.</p></li>
       <li><span class="stamp" data-s="cue">Free app</span><p><strong>Want manual control?</strong> Blackmagic Camera records uncompressed audio and lets you choose the mic and stereo mode.</p></li>
     </ul>
   </section>
@@ -225,6 +245,7 @@
 
 <footer class="foot">
   <p>Fix My ASMR is free and open source (MIT). Your recordings are processed on your own device and never uploaded.</p>
+  <p>Once opened, it also works offline.<span class="ios-only" hidden> To keep it one tap away, tap Share, then Add to Home Screen.</span></p>
   <p>Built with <a href="https://mediabunny.dev">Mediabunny</a> (MPL-2.0) for reading and writing video files.</p>
 </footer>
 

@@ -1,6 +1,6 @@
 // Run: node test/dsp.test.mjs   (no dependencies)
 import assert from 'node:assert/strict';
-import { Analyzer, Chain, Denoiser, Limiter, FFT, toDb } from '../dsp.js';
+import { Analyzer, Chain, Denoiser, Limiter, FFT, Biquad, highpass, toDb } from '../dsp.js';
 
 const fs = 48000;
 const sine = (n, f, a, phase = 0) => Float32Array.from({ length: n }, (_, i) => a * Math.sin((2 * Math.PI * f * i) / fs + phase));
@@ -85,6 +85,78 @@ const blocks = (L, R, size, fn) => { for (let i = 0; i < L.length; i += size) { 
   const s = a.finish();
   assert.ok(!(s.correlation > 0.98), `read as mono (${s.correlation})`);
   assert.ok(s.sideMoments.length > 0, 'no one-sided moments found');
+}
+
+const rmsOf = (x, a = 0, b = x.length) => Math.sqrt(x.subarray(a, b).reduce((t, v) => t + v * v, 0) / (b - a));
+const runChain = (params, L, R) => { const c = new Chain(fs); c.set({ limit: false, ...params }); c.m = c.mTarget.slice(); c.g = c.gTarget; c.w = params.width || 0; blocks(L, R, 256, (l, r, k) => c.process(l, r, k)); return c.latency; };
+
+// EQ: +6 dB air shelf lifts 16 kHz by about 6 dB and leaves 200 Hz alone
+{
+  const hi = sine(fs, 16000, 0.1), lo = sine(fs, 200, 0.1), z1 = new Float32Array(fs), z2 = new Float32Array(fs);
+  runChain({ eqHigh: 6 }, hi, z1); runChain({ eqHigh: 6 }, lo, z2);
+  const gHi = toDb(rmsOf(hi, fs / 2)) - toDb(0.1 / Math.SQRT2), gLo = toDb(rmsOf(lo, fs / 2)) - toDb(0.1 / Math.SQRT2);
+  assert.ok(gHi > 5 && gHi < 7, `air shelf gain ${gHi.toFixed(2)}`);
+  assert.ok(Math.abs(gLo) < 0.3, `low band changed ${gLo.toFixed(2)}`);
+}
+
+// De-esser: a harsh 7 kHz burst over a soft tone gets turned down; the plain tone does not
+{
+  const n = fs, base = sine(n, 300, 0.05), burst = noise(n, 0.3, 41);
+  const hp = new Biquad(highpass(fs, 6000, Math.SQRT1_2)); hp.run(burst, n);
+  const L = Float32Array.from(base, (v, i) => v + (i > n / 2 ? burst[i] : 0)), R = L.slice(), ref = L.slice();
+  runChain({ deess: 2 }, L, R);
+  const hiBand = (x) => { const y = x.slice(); const f = new Biquad(highpass(fs, 6000, Math.SQRT1_2)); f.run(y, y.length); return rmsOf(y, Math.floor(n * 0.7), n); };
+  const drop = toDb(hiBand(L)) - toDb(hiBand(ref));
+  assert.ok(drop < -3, `sibilance only dropped ${drop.toFixed(1)} dB`);
+  const tone = sine(n, 300, 0.2), t2 = tone.slice();
+  runChain({ deess: 2 }, tone, t2);
+  assert.ok(Math.abs(toDb(rmsOf(tone, n / 2)) - toDb(0.2 / Math.SQRT2)) < 0.3, 'plain tone changed');
+}
+
+// Mono widening: decorrelates a mono recording and keeps the mono sum identical
+{
+  const n = fs, m = noise(n, 0.2, 51), L = m.slice(), R = m.slice();
+  const c = new Chain(fs); c.set({ limit: false, monoWiden: 1, rumbleHz: 0 }); c.m = c.mTarget.slice();
+  blocks(L, R, 256, (l, r, k) => c.widenMono(l, r, k));
+  let xy = 0, xx = 0, yy = 0, sumErr = 0;
+  for (let i = 0; i < n; i++) { xy += L[i] * R[i]; xx += L[i] * L[i]; yy += R[i] * R[i]; sumErr = Math.max(sumErr, Math.abs((L[i] + R[i]) / 2 - m[i])); }
+  assert.ok(xy / Math.sqrt(xx * yy) < 0.9, 'still mono after widening');
+  assert.ok(sumErr < 1e-6, `mono sum changed by ${sumErr}`);
+}
+
+// Slate snap: found at the right time, on the right side
+{
+  const n = fs * 3, L = noise(n, 0.001, 61), R = noise(n, 0.001, 67);
+  for (let i = 0; i < 480; i++) { const v = 0.6 * Math.exp(-i / 60) * Math.sin(i * 1.7); L[fs + i] += v; R[fs + i] += v * 0.2; }
+  const a = new Analyzer(fs); blocks(L, R, 4096, (l, r, k) => a.push(l, r, k));
+  const snap = a.finish().snap;
+  assert.ok(snap && Math.abs(snap.t - 1) < 0.02, `snap time ${snap && snap.t}`);
+  assert.ok(snap.ild > 6, `snap side ${snap.ild}`);
+}
+
+// Bandwidth: audio with nothing above 7 kHz (like a Bluetooth mic) reads as narrow; full-band does not
+{
+  const n = fs * 3, wide = noise(n, 0.2, 71), narrow = new Float32Array(n);
+  let seed = 7;
+  for (let j = 0; j < 40; j++) {
+    seed = (seed * 16807) % 2147483647;
+    const f = 100 + (seed / 2147483647) * 6900, ph = (seed % 1000) / 159;
+    for (let i = 0; i < n; i++) narrow[i] += 0.01 * Math.sin((2 * Math.PI * f * i) / fs + ph);
+  }
+  const an = (x) => { const a = new Analyzer(fs); blocks(x, x.slice(), 4096, (l, r, k) => a.push(l, r, k)); return a.finish().bandwidth; };
+  assert.equal(an(narrow).narrow, true, 'band-limited audio not flagged');
+  assert.equal(an(wide).narrow, false, 'full-band audio flagged as narrow');
+}
+
+// Neutral chain with the limiter on is bit-exact once its reported latency is trimmed
+// (export relies on this to keep sound and picture in sync to the sample)
+{
+  const L = noise(30000, 0.4, 21), R = noise(30000, 0.4, 23), oL = L.slice(), oR = R.slice();
+  const c = new Chain(fs); c.set({}); c.m = c.mTarget.slice(); c.g = c.gTarget;
+  blocks(oL, oR, 512, (l, r, k) => c.process(l, r, k));
+  let err = 0;
+  for (let i = c.latency + 4096; i < 30000; i++) err = Math.max(err, Math.abs(oL[i] - L[i - c.latency]), Math.abs(oR[i] - R[i - c.latency]));
+  assert.ok(err < 1e-5, `neutral chain differs from its input by ${err}`);
 }
 
 console.log('dsp: all checks passed');

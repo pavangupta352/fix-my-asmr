@@ -11,8 +11,8 @@ const ui = {
   progress: $('progress'), progressLabel: $('progress-label'), progressBar: $('progress-bar'), cancel: $('cancel'),
   error: $('error'), desk: $('desk'), screen: $('screen'), audioOnly: $('audio-only'),
   play: $('play'), time: $('time'), tl: $('tl-canvas'), scrub: $('scrub'), timeline: $('timeline'), playhead: $('playhead'), marks: $('marks'), markList: $('mark-list'),
-  sides: $('sides'), sidesText: $('sides-text'), sidesPlay: $('sides-play'), sidesAnswer: $('sides-answer'), sidesSame: $('sides-same'), sidesOpp: $('sides-opposite'),
-  fixes: $('fixes'), adjust: $('adjust-body'), save: $('save'), go: $('go'), goLabel: $('go-label'), saveNote: $('save-note'),
+  sides: $('sides'), sidesText: $('sides-text'), sidesHint: $('sides-hint'), sidesPlay: $('sides-play'), sidesAnswer: $('sides-answer'), sidesSame: $('sides-same'), sidesOpp: $('sides-opposite'),
+  fixes: $('fixes'), adjust: $('adjust-body'), saveas: $('saveas'), save: $('save'), go: $('go'), goLabel: $('go-label'), saveNote: $('save-note'),
   done: $('done'), doneTitle: $('done-title'), doneText: $('done-text'), nextTime: $('next-time'), share: $('share'), download: $('download'), again: $('again'),
   hp: $('hp-test'), hpLive: $('hp-live'), veil: $('dropveil'),
 };
@@ -24,15 +24,30 @@ const slots = { L: $('slot-left'), R: $('slot-right') };
 
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-if (isIOS) document.querySelector('.ios-only').hidden = false;
+const isSafari = isIOS || /^((?!chrome|chromium|android|edg).)*safari/i.test(navigator.userAgent);
+if (isIOS) document.querySelectorAll('.ios-only').forEach((e) => { e.hidden = false; });
 
 // Popular ASMR uploads sit around -31 LUFS (median of 35 measured); YouTube never turns quiet videos up.
 const VOLUME = { soft: -32, comfortable: -26, strong: -19 };
 const HISS = { gentle: 6, medium: 10, strong: 12 };
 const WIDTH = { subtle: 0.35, strong: 0.5 };
+const MONO = { subtle: 0.5, strong: 1 };
+const MIME = { mov: 'video/quicktime', mp4: 'video/mp4', mkv: 'video/x-matroska', webm: 'video/webm', m4a: 'audio/mp4', wav: 'audio/wav' };
+
+// Style choices carry over to the next recording; per-file fixes (sides, trim, picture) don't.
+const PREF_KEYS = ['target', 'width', 'eqLow', 'eqMid', 'eqHigh', 'deess', 'hissSens', 'limit', 'saveMode', 'audioFormat'];
+const PREF_STORE = 'fix-my-asmr:settings';
+function loadPrefs() {
+  try { const p = JSON.parse(localStorage.getItem(PREF_STORE)); return p && typeof p === 'object' ? p : {}; } catch { return {}; }
+}
+function savePrefs() {
+  if (!S?.opt) return;
+  try { localStorage.setItem(PREF_STORE, JSON.stringify(Object.fromEntries(PREF_KEYS.map((k) => [k, S.opt[k]])))); } catch { /* private mode: settings just aren't remembered */ }
+}
 const toDb = (x) => 20 * Math.log10(Math.max(x, 1e-12));
 const fmtTime = (s) => { s = Math.max(0, Math.floor(s)); const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = String(s % 60).padStart(2, '0'); return h ? `${h}:${String(m).padStart(2, '0')}:${x}` : `${m}:${x}`; };
 const fmtSize = (b) => (b >= 1e9 ? (b / 1e9).toFixed(1) + ' GB' : Math.max(1, Math.round(b / 1e6)) + ' MB');
+const fmtCut = (s) => { const t = Math.max(0, s), m = Math.floor(t / 60), x = t - m * 60; return `${m}:${x < 10 ? '0' : ''}${x.toFixed(1)}`; };
 const sideName = (s) => (s === 'left' ? 'left' : 'right');
 const num = (x) => (Math.round(x) < 0 ? '−' : '') + Math.abs(Math.round(x)); // true minus sign
 
@@ -95,11 +110,11 @@ function load(file) {
   media.addEventListener('seeked', kick);
   media.addEventListener('error', () => {
     ui.audioOnly.hidden = false;
-    ui.audioOnly.firstElementChild.textContent = 'This browser can’t play this video. Saving still applies every fix.';
+    ui.audioOnly.firstElementChild.textContent = 'This browser can’t play this file, so there’s no preview. Saving still applies every fix.';
   });
   S = {
     file, isVideo, url: URL.createObjectURL(file), media,
-    info: null, stats: null, opt: null, sides: null, checks: 0, after: true, saving: false,
+    info: null, stats: null, video: null, opt: null, sides: null, checks: 0, after: true, saving: false,
   };
   ui.stage.dataset.state = 'loaded';
   scheduleRender();
@@ -125,8 +140,9 @@ function load(file) {
   worker.postMessage({ type: 'analyze', file });
 }
 
-function onEngine({ data }) {
+async function onEngine({ data }) {
   if (data.type === 'info') { S.info = data.info; renderFacts(); }
+  else if (data.type === 'video') { S.video = data.video; if (S.stats) { renderSides(); renderFixes(); } }
   else if (data.type === 'progress') {
     const pct = Math.round(Math.min(1, data.value) * 100);
     if (data.stage === 'analyze') showProgress(`Checking the sound… ${pct}%`, pct, false);
@@ -135,19 +151,55 @@ function onEngine({ data }) {
   else if (data.type === 'exported') onExported(data);
   else if (data.type === 'canceled') { endSave(); ui.saveNote.textContent = 'Stopped. Nothing was saved.'; }
   else if (data.type === 'error') {
+    // Apple Lossless, compressed AIFF/CAF and the like: Safari can often decode these itself.
+    if (data.stage === 'analyze' && !S.triedDecode && /^(unsupported-file|audio-not-decodable:[^:]*:audio)/.test(data.message) && !/\.avi$/i.test(S.file.name)) {
+      S.triedDecode = true;
+      const got = await decodeFallback(+(data.message.match(/:(\d{4,6})$/)?.[1]) || 0);
+      if (got === true) return;
+      if (got === 'too-big') { keepAwake(false); return showError('This file is too large for this browser to read directly. Export it as WAV or M4A and try again.'); }
+    }
     keepAwake(false);
     if (S.saving) endSave();
-    showError(friendlyError(data.message));
+    if (data.stack) console.error('Fix My ASMR engine:', data.stack);
+    showError(friendlyError(data.message, data.stage));
   }
 }
 
-function friendlyError(msg) {
-  if (/unsupported-file/.test(msg)) return "This file can't be opened here. Try a video or audio file such as MOV, MP4, M4A or WAV.";
+async function decodeFallback(rate) {
+  if (S.file.size > 150e6) return 'too-big';
+  try {
+    showProgress('Reading the sound…', 0, false);
+    const ctx = new OfflineAudioContext(2, 1, rate || 48000);
+    const buf = await ctx.decodeAudioData(await S.file.arrayBuffer());
+    const channels = [];
+    for (let c = 0; c < Math.min(2, buf.numberOfChannels); c++) { const a = new Float32Array(buf.length); buf.copyFromChannel(a, c); channels.push(a); }
+    worker.postMessage({ type: 'analyzePcm', name: S.file.name, size: S.file.size, sampleRate: buf.sampleRate, channels }, channels.map((a) => a.buffer));
+    return true;
+  } catch { return false; }
+}
+
+function friendlyError(msg, stage) {
+  if (/unsupported-file/.test(msg)) {
+    return /\.avi$/i.test(S?.file?.name || '')
+      ? 'AVI files can’t be opened in a browser. Convert it to MP4 first (HandBrake does this for free), then try again.'
+      : 'This file can’t be opened here. Try a video or audio file such as MOV, MP4, M4A, WAV, AIFF, MP3 or FLAC.';
+  }
   if (/no-audio/.test(msg)) return 'This file has no sound track to fix.';
-  if (/audio-not-decodable/.test(msg)) return "This browser can't read the sound in this file. Try Chrome or Safari, or export the file again with AAC audio.";
+  const nd = msg.match(/audio-not-decodable:([^:]*):(video|audio)/);
+  if (nd) {
+    const kind = { ac3: ' (Dolby Digital)', eac3: ' (Dolby Digital Plus)', alac: ' (Apple Lossless)' }[nd[1]] || '';
+    if (nd[2] === 'video') return `This browser can’t read the sound in this video${kind}. Export the video again with AAC sound, then try again.`;
+    return isSafari
+      ? `This kind of audio${kind} can’t be read here. Export the file as WAV or M4A, then try again.`
+      : `This browser can’t read this kind of audio${kind}. Open this page in Safari, or export the file as WAV or M4A.`;
+  }
+  if (/cannot-convert: video/.test(msg)) return 'This browser can’t make that kind of video. Choose Same format or Smaller MP4 under Save as, or try Chrome or Safari.';
   if (/cannot-convert/.test(msg)) return "This browser can't write the fixed file. Try a current version of Chrome or Safari.";
   if (/quota|QuotaExceeded|space/i.test(msg)) return 'There isn’t enough free storage on this device for the fixed copy. Free up some space and try again.';
-  return 'Something went wrong: ' + msg;
+  console.error('Fix My ASMR:', msg);
+  return stage === 'export'
+    ? 'Saving stopped before it finished. Try again, or choose Same format under Save as.'
+    : 'This recording couldn’t be checked. Try again, or try another copy of the file.';
 }
 
 function showError(text) {
@@ -197,6 +249,7 @@ function onAnalysis({ stats, timeline, noise }) {
   ui.progress.hidden = true;
   ui.desk.hidden = false;
   renderAll();
+  aacEncodable().then((ok) => { if (S?.stats === stats) { S.aac = ok; renderSaveAs(); } });
   drawTimeline();
   setupPreview();
 }
@@ -212,9 +265,19 @@ function recommend(st) {
   const o = {
     swap: false, invert: st.correlation < -0.5, copySide: st.silentChannel === 'left' ? 'right' : st.silentChannel === 'right' ? 'left' : null,
     trimL: 0, trimR: 0, evenOut: false,
-    rumble: 35, hum: st.hum?.hz || 0, hissDb: 0, width: 0, target: VOLUME.comfortable, limit: true,
-    rotate: 0, mirror: false, audioFormat: 'm4a',
+    rumble: 35, hum: st.hum?.hz || 0, hissDb: 0, hissSens: 8, width: 0, target: VOLUME.comfortable, limit: true,
+    eqLow: 0, eqMid: 0, eqHigh: 0, deess: 0, monoWiden: 0,
+    delayMs: 0, trim: null, rotate: 0, mirror: false, saveMode: 'original', audioFormat: 'm4a',
   };
+  // Remembered style choices, each checked against the type it should have.
+  const saved = loadPrefs();
+  for (const k of PREF_KEYS) {
+    const v = saved[k];
+    if (v === undefined) continue;
+    if (k === 'target' ? v === null || Number.isFinite(v) : typeof v === typeof o[k] && (typeof v !== 'number' || Number.isFinite(v))) o[k] = v;
+  }
+  if (!['original', 'small', 'social'].includes(o.saveMode)) o.saveMode = 'original';
+  if (!['m4a', 'wav'].includes(o.audioFormat)) o.audioFormat = 'm4a';
   const floorAfter = st.floorDb + gainFor(o.target);
   if (st.floorDb > -100) o.hissDb = floorAfter > -46 ? HISS.medium : floorAfter > -58 ? HISS.gentle : 0;
   return o;
@@ -227,19 +290,31 @@ function params() {
   const flips = (o.mirror ? 1 : 0) ^ (o.rotate === 180 ? 1 : 0);
   return {
     swap: !!((o.swap ? 1 : 0) ^ flips), invert: o.invert, copySide: o.copySide,
-    trimL: o.trimL, trimR: o.trimR, rumbleHz: o.rumble, humHz: o.hum, hissDb: o.hissDb,
+    trimL: o.trimL, trimR: o.trimR, rumbleHz: o.rumble, humHz: o.hum, hissDb: o.hissDb, hissSens: o.hissSens,
+    eqLow: o.eqLow, eqMid: o.eqMid, eqHigh: o.eqHigh, deess: o.deess, monoWiden: o.monoWiden,
     width: o.width, gainDb: gainFor(o.target), limit: o.limit, rotate: o.rotate, mirror: o.mirror,
+    delayMs: S.isVideo ? o.delayMs : 0, trim: o.trim,
   };
 }
 
+// What a save would produce: the fixes plus the file type. Changing either after saving offers a new save.
+const exportKey = () => JSON.stringify([params(), S.isVideo ? S.opt.saveMode : S.opt.audioFormat]);
+
+function markDirty() {
+  if (ui.done.hidden) return;
+  const dirty = S.savedKey !== exportKey();
+  ui.save.hidden = !dirty;
+  if (dirty) ui.goLabel.textContent = 'Save again with these changes';
+  else updateGoLabel();
+}
+
 function changed() {
-  if (!ui.done.hidden) {
-    const dirty = S.savedKey !== JSON.stringify(params());
-    ui.save.hidden = !dirty;
-    if (dirty) ui.goLabel.textContent = 'Save again with these changes';
-  }
+  savePrefs();
   renderFixes();
   renderAdjust();
+  renderSaveAs();
+  drawTrim();
+  markDirty();
   S.node?.port.postMessage({ params: params() });
   arrangeChips(S.after && params().swap);
 }
@@ -278,7 +353,7 @@ function toggle(label, checked, onFlip) {
 
 const STAMP = { fixing: 'Fixing', fixed: 'Fixed', 'not-needed': 'Not needed', off: 'Off', cant: "Can't fix", note: 'Note' };
 function row(key, title, text, stamp, ...control) {
-  if (stamp === 'fixing' && S.savedKey === JSON.stringify(params())) stamp = 'fixed';
+  if (stamp === 'fixing' && S.savedParams === JSON.stringify(params())) stamp = 'fixed';
   const prev = S.stamps?.[key];
   const st = h('span', { class: 'stamp' + (prev && prev !== stamp ? ' pressed' : ''), 'data-s': stamp }, plate(stamp === 'off' || stamp === 'not-needed'), STAMP[stamp]);
   S.stamps[key] = stamp;
@@ -289,12 +364,22 @@ function renderAll() {
   renderSides();
   renderFixes();
   renderAdjust();
+  renderSaveAs();
   updateGoLabel();
 }
 
+// Moments to check: a deliberate snap at the start first, then the strongest one-sided sounds.
+function sideList() {
+  const st = S.stats, out = [];
+  if (st.snap && Math.abs(st.snap.ild) >= 6) out.push({ t: st.snap.t, ild: st.snap.ild, snap: true });
+  for (const m of st.sideMoments) if (!out.some((x) => Math.abs(x.t - m.t) < 2)) out.push(m);
+  return out;
+}
+
 function renderSides() {
-  const moments = S.stats.sideMoments;
+  const moments = sideList(), snap = moments[0]?.snap ? moments[0] : null;
   ui.sides.classList.toggle('answered', !!S.sides);
+  ui.sidesHint.hidden = true;
   if (!S.isVideo) {
     ui.sidesText.textContent = 'There’s no picture to compare with. For a listener facing you, a sound on your right should come from their left. Swap only if yours is the other way round.';
     ui.sidesPlay.hidden = true; ui.sidesAnswer.hidden = true;
@@ -308,8 +393,17 @@ function renderSides() {
   ui.sidesPlay.hidden = false;
   if (S.sides === 'same') ui.sidesText.textContent = 'Sides match the picture. Nothing to swap.';
   else if (S.sides === 'swapped') ui.sidesText.textContent = 'Swapped. Play the check again to hear the corrected sides.';
+  else if (snap && !S.checks) ui.sidesText.textContent = `There’s a snap at ${snap.t < 60 ? fmtCut(snap.t) : fmtTime(snap.t)}, louder on the ${snap.ild > 0 ? 'left' : 'right'}. Play it, watch which side of the picture it happens on, and listen for which ear you hear it in.`;
   else ui.sidesText.textContent = 'Play a moment where a sound happens on one side. Watch where it happens in the picture and listen for which ear you hear it in.';
-  ui.sidesPlay.lastChild.textContent = S.checks ? 'Play another check' : 'Play a side check';
+  // The automatic picture check only suggests; the listener decides.
+  const pc = S.video?.picture, n = pc ? pc.agree + pc.disagree : 0;
+  if (!S.sides && n >= 2) {
+    ui.sidesHint.hidden = false;
+    ui.sidesHint.replaceChildren(h('b', {}, 'Picture check: '), !pc.disagree ? `in ${pc.agree} of ${n} moments, the movement in the picture was on the same side as the sound. The sides look right.`
+      : !pc.agree ? `in ${pc.disagree} of ${n} moments, the movement was on the opposite side to the sound. The sides may be swapped. Listen to make sure.`
+      : 'the picture didn’t give a clear answer, so trust your ears.');
+  }
+  ui.sidesPlay.lastChild.textContent = S.checks ? 'Play another check' : snap ? 'Play the snap' : 'Play a side check';
 }
 
 function renderFixes() {
@@ -359,10 +453,17 @@ function renderFixes() {
     seg('Volume', 'vol', [['off', 'Off'], ['soft', 'Soft'], ['comfortable', 'Comfortable'], ['strong', 'Strong']], volPick, (v) => { o.target = v === 'off' ? null : VOLUME[v]; changed(); })));
 
   const mono = st.correlation > 0.98;
-  const widthPick = o.width === 0 ? 'off' : Object.keys(WIDTH).find((k) => WIDTH[k] === o.width) || 'custom';
-  out.push(row('width', '3D width', mono ? 'Both sides carry nearly the same sound, so there is little to widen.' : 'Spreads high sounds a little wider for more ear-to-ear feel. Check it on headphones.',
-    o.width ? 'fixing' : 'off',
-    seg('3D width', 'width', [['off', 'Off'], ['subtle', 'Subtle'], ['strong', 'Strong']], widthPick, (v) => { o.width = v === 'off' ? 0 : WIDTH[v]; changed(); })));
+  if (mono) {
+    const monoPick = o.monoWiden === 0 ? 'off' : Object.keys(MONO).find((k) => MONO[k] === o.monoWiden) || 'custom';
+    out.push(row('mono', 'Almost mono', 'Both sides carry nearly the same sound. Widening adds gentle space to the high sounds; on a phone speaker it sounds the same as before.',
+      o.monoWiden ? 'fixing' : 'off',
+      seg('Widen a mono recording', 'mono', [['off', 'Off'], ['subtle', 'Subtle'], ['strong', 'Strong']], monoPick, (v) => { o.monoWiden = v === 'off' ? 0 : MONO[v]; changed(); })));
+  } else {
+    const widthPick = o.width === 0 ? 'off' : Object.keys(WIDTH).find((k) => WIDTH[k] === o.width) || 'custom';
+    out.push(row('width', '3D width', 'Spreads high sounds a little wider for more ear-to-ear feel. Check it on headphones.',
+      o.width ? 'fixing' : 'off',
+      seg('3D width', 'width', [['off', 'Off'], ['subtle', 'Subtle'], ['strong', 'Strong']], widthPick, (v) => { o.width = v === 'off' ? 0 : WIDTH[v]; changed(); })));
+  }
 
   // Measured only where both sides carry the same sound, so deliberate one-ear passages don't count.
   const lean = st.balanceDb >= 2 ? 'left' : st.balanceDb <= -2 ? 'right' : null;
@@ -381,30 +482,49 @@ function renderFixes() {
     const n = clipMarks().length;
     out.push(row('clip', `Distorted in ${n} ${n === 1 ? 'place' : 'places'}`, 'These moments overloaded the mic while recording and can’t be repaired. They’re numbered on the timeline. Next time keep loud triggers a little further from the phone.', 'cant'));
   }
+  const bw = st.bandwidth;
+  if (bw?.narrow) {
+    out.push(row('narrow', 'Muffled, like a Bluetooth mic', 'The high, crisp detail is missing, which is typical of AirPods and other Bluetooth mics. It can’t be added back.', 'cant'));
+  }
+  if (S.isVideo && st.gated?.gaps >= 8 && st.gated.share > 0.05) {
+    out.push(row('gated', 'Complete silence between sounds', 'The background keeps dropping to total silence. That usually means Voice Isolation or another noise filter was on while recording, and it removes soft triggers for good.', 'note'));
+  }
   if (st.pumping?.likely) out.push(row('pump', 'The background dips after loud sounds', `After loud moments the hiss drops about ${num(st.pumping.dropDb)} dB, then creeps back. That's the iPhone's automatic level control, and it can't be undone afterwards. Hiss reduction makes it less noticeable.`, 'note'));
+  const fps = S.video?.fps;
+  if (fps && fps.lowSeconds >= 2) out.push(row('fps', 'The frame rate dropped', `For ${fps.lowSeconds} seconds the video ran below ${fps.nominal} fps, at times as low as ${fps.lowest}. iPhone’s Auto FPS does this in dim light, and some editors drift out of sync on clips like this. TikTok & Reels under Save as gives a steady frame rate.`, 'note'));
+  if (S.video?.brightness != null && S.video.brightness < 0.08) out.push(row('dark', 'Very dark picture', 'If that isn’t the look you wanted: dark video turns grainy after upload, and more light keeps the frame rate steady.', 'note'));
   if (S.info.video?.rotation === 180) out.push(row('rot', 'Set to play upside down', 'This video is flagged to play rotated 180°. If it was turned in an editor after filming, the sides are now swapped; use the side check.', 'note'));
   if (isIOS && S.info.video?.codec === 'avc' && !S.info.spatial) out.push(row('picker', 'Possibly a converted copy', 'If you picked this from Photos, iPhone may have converted it to a lower-quality copy. For the original, save it to Files first and choose it from there.', 'note'));
-  if (mono) out.push(row('mono', 'Almost mono', 'Both sides carry nearly the same sound. For real left and right, film in landscape with Record Sound set to Stereo.', 'note'));
   if (S.info.spatial) out.push(row('spatial', 'Spatial Audio track', 'Your iPhone also saved a Spatial Audio track. The fixed copy keeps the regular stereo track, the one editors and apps play.', 'note'));
   if (S.info.video && ['hlg', 'pq'].includes(S.info.video.color?.transfer)) out.push(row('hdr', 'HDR picture', 'The picture is copied untouched, including its HDR and Dolby Vision information.', 'note'));
 
   keepFocus(ui.fixes, () => ui.fixes.replaceChildren(...out));
 }
 
-// Re-rendering replaces controls; put keyboard focus back on the same one.
+// Re-rendering replaces controls; put keyboard focus back on the same one, or on its
+// neighbour when the control itself went away.
+const FOCUS_NEXT = { 'cut-reset': 'cut-start' };
 function keepFocus(root, render) {
   const a = document.activeElement, k = root.contains(a) ? a.dataset.k : null;
   render();
-  if (k) root.querySelector(`[data-k="${CSS.escape(k)}"]`)?.focus({ preventScroll: true });
+  if (!k) return;
+  const at = (key) => root.querySelector(`[data-k="${CSS.escape(key)}"]`);
+  (at(k) || (FOCUS_NEXT[k] && at(FOCUS_NEXT[k])))?.focus({ preventScroll: true });
 }
+const announce = (text) => { $('route-live').textContent = text; };
 
 // ---------------------------------------------------------------- Adjust panel (pro controls)
 
 function slider(label, min, max, step, value, fmt, onInput) {
   const id = `adj-${uid++}`;
   const out = h('output', { for: id }, fmt(value));
-  const input = h('input', { type: 'range', id, min, max, step, value });
-  input.addEventListener('input', () => { out.textContent = fmt(+input.value); onInput(+input.value); });
+  const input = h('input', { type: 'range', id, min, max, step, value, 'aria-valuetext': fmt(value), 'data-k': label });
+  input.addEventListener('input', () => {
+    const text = fmt(+input.value);
+    out.textContent = text;
+    input.setAttribute('aria-valuetext', text);
+    onInput(+input.value);
+  });
   return h('div', { class: 'adj-row' }, h('label', { for: id }, label), out, input);
 }
 function select(label, value, options, onPick) {
@@ -418,7 +538,7 @@ function check(label, value, onFlip) {
 }
 
 function renderAdjust() {
-  const o = S.opt, quiet = () => { renderFixes(); S.node?.port.postMessage({ params: params() }); arrangeChips(S.after && params().swap); };
+  const o = S.opt, quiet = () => { savePrefs(); renderFixes(); markDirty(); S.node?.port.postMessage({ params: params() }); arrangeChips(S.after && params().swap); };
   const db = (v) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(1)} dB`;
   const groups = [
     h('div', { class: 'adj-group' }, h('h4', {}, 'Sides'),
@@ -430,31 +550,112 @@ function renderAdjust() {
     h('div', { class: 'adj-group' }, h('h4', {}, 'Clean-up'),
       select('Rumble cut', o.rumble, [[0, 'Off'], [35, '35 Hz'], [60, '60 Hz'], [80, '80 Hz'], [120, '120 Hz']], (v) => { o.rumble = v; quiet(); }),
       select('Hum removal', o.hum, [[0, 'Off'], [50, '50 Hz'], [60, '60 Hz']], (v) => { o.hum = v; quiet(); }),
-      slider('Hiss reduction', 0, 18, 1, o.hissDb, (v) => (v ? `${v} dB` : 'Off'), (v) => { o.hissDb = v; quiet(); })),
+      slider('Hiss reduction', 0, 18, 1, o.hissDb, (v) => (v ? `${v} dB` : 'Off'), (v) => { o.hissDb = v; quiet(); }),
+      select('Faint sounds near the hiss', o.hissSens, [[5, 'Keep more of them'], [8, 'Normal'], [12, 'Clean more hiss']], (v) => { o.hissSens = v; quiet(); })),
+    h('div', { class: 'adj-group' }, h('h4', {}, 'Tone'),
+      slider('Warmth', -6, 6, 0.5, o.eqLow, db, (v) => { o.eqLow = v; quiet(); }),
+      slider('Clarity', -6, 6, 0.5, o.eqMid, db, (v) => { o.eqMid = v; quiet(); }),
+      slider('Air', -6, 6, 0.5, o.eqHigh, db, (v) => { o.eqHigh = v; quiet(); }),
+      select('Soften harsh S sounds', o.deess, [[0, 'Off'], [1, 'Gently'], [2, 'More']], (v) => { o.deess = v; quiet(); })),
     h('div', { class: 'adj-group' }, h('h4', {}, 'Level and width'),
       check('Change volume', o.target != null, (v) => { o.target = v ? VOLUME.comfortable : null; changed(); }),
       o.target != null ? slider('Volume target', -36, -14, 1, o.target, (v) => `${num(v)} LUFS`, (v) => { o.target = v; quiet(); }) : null,
       check('Peak limiter', o.limit, (v) => { o.limit = v; quiet(); }),
-      slider('3D width', 0, 100, 5, Math.round(o.width * 100), (v) => (v ? `${v}%` : 'Off'), (v) => { o.width = v / 100; quiet(); })),
+      S.stats.correlation > 0.98
+        ? slider('Widen a mono recording', 0, 100, 5, Math.round(o.monoWiden * 100), (v) => (v ? `${v}%` : 'Off'), (v) => { o.monoWiden = v / 100; quiet(); })
+        : slider('3D width', 0, 100, 5, Math.round(o.width * 100), (v) => (v ? `${v}%` : 'Off'), (v) => { o.width = v / 100; quiet(); })),
+    timingGroup(),
   ];
   if (S.isVideo) {
     groups.push(h('div', { class: 'adj-group' }, h('h4', {}, 'Picture'),
       select('Rotate picture', o.rotate, [[0, 'No'], [90, '90° clockwise'], [180, 'Upside down'], [270, '90° anticlockwise']], (v) => { o.rotate = v; changed(); }),
       check('Mirror picture', o.mirror, (v) => { o.mirror = v; changed(); }),
-      h('p', { class: 'adj-note' }, 'Turning the picture upside down or mirroring it also swaps the sound, so the two keep matching. Only the file’s orientation info changes; the video itself isn’t re-encoded.')));
-  } else {
-    groups.push(h('div', { class: 'adj-group' }, h('h4', {}, 'File type'),
-      h('div', { class: 'adj-row' }, h('span', { class: 'lbl' }, 'Save as'),
-        seg('Save as', 'fmt', [['m4a', 'M4A (smaller)'], ['wav', 'WAV (lossless)']], o.audioFormat, (v) => { o.audioFormat = v; updateGoLabel(); }))));
+      h('p', { class: 'adj-note' }, 'Turning the picture upside down or mirroring it also swaps the sound, so the two keep matching. ' + (o.saveMode === 'social'
+        ? 'With TikTok & Reels chosen, the turn is built into the new picture.'
+        : 'Only the file’s orientation info changes; the picture itself isn’t changed.'))));
   }
+  groups.push(h('div', { class: 'adj-group' },
+    h('button', { class: 'ghost small', type: 'button', 'data-k': 'reset', onclick: resetSettings }, 'Reset to recommended settings')));
   keepFocus(ui.adjust, () => ui.adjust.replaceChildren(...groups));
+}
+
+// Trim and sync. Both are applied when saving; playback stops at the end point.
+function timingGroup() {
+  const o = S.opt, d = S.duration || S.info.duration, tr = o.trim || { start: 0, end: d };
+  const snap = S.stats.snap && S.stats.snap.t < d - 2 ? S.stats.snap : null;
+  const point = (label, which) => h('div', { class: 'adj-row' },
+    h('span', { class: 'lbl' }, label, ' ', h('span', { class: 'cut-at' }, fmtCut(tr[which]))),
+    h('button', { class: 'ghost small', type: 'button', 'data-k': `cut-${which}`, 'aria-label': `Set ${which} to playhead`, onclick: () => setTrim(which, S.media.currentTime) }, 'Set to playhead'));
+  return h('div', { class: 'adj-group' }, h('h4', {}, 'Timing'),
+    point('Start', 'start'),
+    point('End', 'end'),
+    snap || o.trim ? h('div', { class: 'adj-actions' },
+      snap ? h('button', { class: 'ghost small', type: 'button', 'data-k': 'cut-snap', onclick: () => setTrim('start', snap.t + 0.6) }, 'Start after the snap') : null,
+      o.trim ? h('button', { class: 'ghost small', type: 'button', 'data-k': 'cut-reset', onclick: () => { o.trim = null; changed(); announce('Keeping the whole recording.'); } }, 'Keep the whole recording') : null) : null,
+    S.isVideo ? slider('Sound sync', -250, 250, 5, o.delayMs, (v) => (v ? `Sound ${Math.abs(v)} ms ${v > 0 ? 'later' : 'earlier'}` : 'In sync'), (v) => { o.delayMs = v; savePrefs(); markDirty(); }) : null,
+    S.isVideo ? h('p', { class: 'adj-note' }, 'Moves the sound against the picture if the two are out of step. You’ll hear the change in the saved file.') : null);
+}
+
+function setTrim(which, t) {
+  const o = S.opt, d = S.duration || S.info.duration, tr = o.trim ? { ...o.trim } : { start: 0, end: d };
+  tr[which] = Math.max(0, Math.min(d, t));
+  if (tr.end - tr.start < 1) {
+    if (which === 'start') tr.start = Math.max(0, tr.end - 1); else tr.end = Math.min(d, tr.start + 1);
+  }
+  o.trim = tr.start < 0.05 && tr.end > d - 0.05 ? null : tr;
+  changed();
+  announce(`${which === 'start' ? 'Start' : 'End'} set to ${fmtCut(tr[which])}.`);
+}
+
+function drawTrim() {
+  const tr = S?.opt?.trim, a = $('trim-a'), b = $('trim-b'), d = S?.duration;
+  a.hidden = b.hidden = !tr || !d;
+  if (!tr || !d) return;
+  a.style.width = `${(tr.start / d) * 100}%`;
+  b.style.width = `${(1 - tr.end / d) * 100}%`;
+}
+
+function resetSettings() {
+  try { localStorage.removeItem(PREF_STORE); } catch { /* nothing stored */ }
+  const o = S.opt, keep = { swap: o.swap, copySide: o.copySide, invert: o.invert, rotate: o.rotate, mirror: o.mirror, trim: o.trim, delayMs: o.delayMs, evenOut: o.evenOut, trimL: o.trimL, trimR: o.trimR };
+  S.opt = { ...recommend(S.stats), ...keep };
+  changed();
+  announce('Back to the recommended settings.');
+}
+
+function renderSaveAs() {
+  const o = S.opt, v = S.info.video, hdr = ['hlg', 'pq'].includes(v?.color?.transfer), big = v && Math.max(v.width, v.height) > 1920;
+  const c = S.info.container;
+  const notes = {
+    original: (c === 'Matroska' ? 'An MKV like the one you chose, with the best sound.'
+      : c === 'WebM' ? 'A WebM like the one you chose.'
+      : 'A MOV with the best sound. Best for editing; the file gets bigger.') + ' The picture isn’t changed.',
+    small: 'An MP4 with high-quality sound. The picture isn’t changed, and the file stays close to its original size.',
+    social: `An MP4 that TikTok and Instagram take without trouble, with a steady frame rate${big ? ', sized for phones' : ''}.${hdr ? ' HDR colour is converted so it doesn’t look washed out.' : ''} Takes longer to save.`,
+    m4a: 'Small, and plays everywhere.',
+    wav: 'The best sound. A large file, best for editing.',
+  };
+  let opts = S.isVideo ? [['original', 'Same format'], ['small', 'Smaller MP4'], ['social', 'TikTok & Reels']] : [['m4a', 'M4A'], ['wav', 'WAV']];
+  let pick = S.isVideo ? o.saveMode : o.audioFormat;
+  // Without an AAC encoder (Firefox, Chrome on Linux) only the lossless choices can be made.
+  if (S.aac === false) {
+    opts = opts.filter(([v]) => v === 'original' || v === 'wav');
+    pick = opts[0][0];
+    notes[pick] += ' Smaller files need Safari, Chrome or Edge on a phone, Mac or Windows.';
+  }
+  keepFocus(ui.saveas, () => ui.saveas.replaceChildren(
+    h('h3', { id: 'saveas-title' }, 'Save as'),
+    seg('Save as', 'saveas', opts, pick, (val) => {
+      if (S.isVideo) o.saveMode = val; else o.audioFormat = val;
+      savePrefs(); renderSaveAs(); markDirty();
+      if (S.isVideo) renderAdjust();
+    }),
+    h('p', { class: 'saveas-note' }, notes[pick])));
 }
 
 function updateGoLabel() {
   ui.goLabel.textContent = S.isVideo ? 'Fix and save video' : 'Fix and save audio';
-  ui.saveNote.textContent = S.isVideo
-    ? 'Saves a new copy. The picture is copied as-is, the sound is saved uncompressed.'
-    : 'Saves a new copy. Your original stays as it was.';
+  ui.saveNote.textContent = 'Saves a new copy. Your original stays as it was.';
 }
 
 // ---------------------------------------------------------------- the pads: rendered surfaces + meters
@@ -566,6 +767,7 @@ function tick() {
     ui.scrub.setAttribute('aria-valuetext', `${fmtTime(m.currentTime)} of ${fmtTime(S.duration)}`);
   }
   if (S.stopAt != null && m.currentTime >= S.stopAt) { m.pause(); S.stopAt = null; ui.sidesAnswer.hidden = false; ui.sidesSame.focus({ preventScroll: true }); }
+  else if (S.stopAt == null && playing && S.opt?.trim && m.currentTime >= S.opt.trim.end) m.pause();
   if (playing || moving) raf = requestAnimationFrame(tick);
 }
 const kick = () => { if (!raf) raf = requestAnimationFrame(tick); };
@@ -609,7 +811,9 @@ async function play(from) {
 ui.play.addEventListener('click', () => {
   if (!S) return;
   S.stopAt = null;
-  if (S.media.paused) play(); else S.media.pause();
+  const tr = S.opt?.trim, at = S.media.currentTime;
+  if (!S.media.paused) S.media.pause();
+  else play(tr && (at < tr.start - 0.05 || at >= tr.end - 0.05) ? tr.start : undefined);
 });
 
 for (const r of document.querySelectorAll('input[name="ab"]')) {
@@ -626,16 +830,16 @@ function setAfter(v) {
 }
 
 ui.sidesPlay.addEventListener('click', () => {
-  const ms = S.stats.sideMoments;
+  const ms = sideList();
   if (!ms.length) return;
   const mo = ms[S.checks % ms.length];
   S.checks++;
   setAfter(true);
   arrangeChips(params().swap);
   ui.sidesAnswer.hidden = true;
-  S.stopAt = mo.t + 1.6;
+  S.stopAt = mo.t + (mo.snap ? 1.2 : 1.6);
   renderSides();
-  play(Math.max(0, mo.t - 1));
+  play(Math.max(0, mo.t - (mo.snap ? 0.6 : 1)));
 });
 ui.sidesSame.addEventListener('click', () => { S.sides = S.opt.swap ? 'swapped' : 'same'; ui.sidesAnswer.hidden = true; renderSides(); changed(); });
 ui.sidesOpp.addEventListener('click', () => {
@@ -704,13 +908,22 @@ new ResizeObserver(() => { if (S?.timeline) drawTimeline(); }).observe(ui.timeli
 // ---------------------------------------------------------------- saving
 
 let saveStart = 0;
+// The file type a save produces. AAC-based choices fall back to the original family where the
+// browser can't encode AAC; the engine makes the same call.
+async function outFormat() {
+  const o = S.opt, aac = S.aac ?? (await aacEncodable());
+  if (!S.isVideo) return { ext: o.audioFormat === 'm4a' && aac ? 'm4a' : 'wav', mode: 'original' };
+  if (o.saveMode !== 'original' && aac) return { ext: 'mp4', mode: o.saveMode };
+  const c = S.info.container;
+  return { ext: c === 'Matroska' ? 'mkv' : c === 'WebM' ? 'webm' : 'mov', mode: 'original' };
+}
+
 ui.go.addEventListener('click', async () => {
   if (!S?.stats || S.saving) return;
   const base = S.file.name.replace(/\.[^.]+$/, '');
-  let ext = 'mov';
-  if (!S.isVideo) ext = S.opt.audioFormat === 'm4a' && (await aacEncodable()) ? 'm4a' : 'wav';
+  const { ext, mode } = await outFormat();
   const name = `${base} (fixed).${ext}`;
-  const mime = { mov: 'video/quicktime', m4a: 'audio/mp4', wav: 'audio/wav' }[ext];
+  const mime = MIME[ext];
   let target = null;
   if ('showSaveFilePicker' in window && !isIOS) {
     try {
@@ -721,7 +934,7 @@ ui.go.addEventListener('click', async () => {
     }
   }
   if (!target) target = { kind: 'opfs', name: `fixed-${Date.now()}.${ext}` };
-  S.saving = true; S.target = target; S.mime = mime; S.exportKey = JSON.stringify(params());
+  S.saving = true; S.target = target; S.pendingKey = exportKey(); S.pendingParams = JSON.stringify(params());
   S.media.pause();
   ui.go.disabled = true;
   ui.done.hidden = true;
@@ -731,7 +944,7 @@ ui.go.addEventListener('click', async () => {
   ui.progress.scrollIntoView({ block: 'nearest', behavior: reduceMotion.matches ? 'auto' : 'smooth' });
   keepAwake(true);
   if (target.kind === 'opfs') navigator.storage.persist?.().catch(() => {});
-  worker.postMessage({ type: 'export', params: params(), target, audioFormat: ext });
+  worker.postMessage({ type: 'export', params: params(), target, audioFormat: ext, mode });
 });
 
 async function aacEncodable() {
@@ -747,7 +960,7 @@ function saveProgress(p) {
     const left = (secs / p) * (1 - p);
     eta = left > 90 ? ` · about ${Math.round(left / 60)} min left` : left > 8 ? ` · about ${Math.round(left / 5) * 5} s left` : '';
   }
-  showProgress(`Saving the fixed copy… ${pct}%${eta}`, pct, true);
+  showProgress(`${S.opt.saveMode === 'social' && S.isVideo ? 'Making the TikTok & Reels copy' : 'Saving the fixed copy'}… ${pct}%${eta}`, pct, true);
 }
 
 ui.cancel.addEventListener('click', () => worker?.postMessage({ type: 'cancel' }));
@@ -761,20 +974,22 @@ function endSave() {
 
 async function onExported(d) {
   endSave();
-  S.savedKey = S.exportKey;
+  S.savedKey = S.pendingKey;
+  S.savedParams = S.pendingParams;
   renderFixes();
   ui.done.hidden = false;
   ui.save.hidden = true;
   ui.share.hidden = true;
   ui.download.hidden = true;
-  const lim = d.limiterDb < -0.5 ? ' The loudest few peaks were softened slightly so they don’t distort.' : '';
+  const lim = (d.limiterDb < -0.5 ? ' The loudest few peaks were softened slightly so they don’t distort.' : '')
+    + (d.notice === 'aac-unavailable' ? ' This browser can’t make MP4 sound, so it was saved in the original format instead.' : '')
+    + (d.notice === 'social-unavailable' ? ' This browser couldn’t remake the picture for TikTok & Reels, so this is a Smaller MP4 with the picture unchanged.' : '');
   if (d.target === 'handle') {
     ui.doneTitle.textContent = 'Saved';
     ui.doneText.textContent = `“${d.name}” (${fmtSize(d.size)}) is saved where you chose.${lim}`;
   } else {
-    const root = await navigator.storage.getDirectory();
-    const stored = await (await root.getFileHandle(S.target.name)).getFile();
-    const file = new File([stored], d.name, { type: S.mime });
+    const stored = d.blob || (await (await (await navigator.storage.getDirectory()).getFileHandle(S.target.name)).getFile());
+    const file = new File([stored], d.name, { type: MIME[d.ext] || '' });
     if (S.outUrl) URL.revokeObjectURL(S.outUrl);
     S.outUrl = URL.createObjectURL(file);
     S.outFile = file;
@@ -801,6 +1016,10 @@ function nextTime() {
   if (st.correlation > 0.98) out.push('Film in landscape so the phone can record real left and right.');
   if (st.silentChannel || Math.abs(st.balanceDb) >= 2) out.push('Check that the case, mount or your fingers aren’t covering a mic hole.');
   if (S.sides === 'swapped') out.push('Snap with your arm out to your right at the start of each take. It makes checking sides instant.');
+  if (st.bandwidth?.narrow) out.push('Record with the iPhone’s own mics or a wired mic. AirPods and other Bluetooth mics record narrow, phone-call sound.');
+  if (S.isVideo && st.gated?.gaps >= 8 && st.gated.share > 0.05) out.push('Before each take, check that Mic Mode in Control Center isn’t set to Voice Isolation.');
+  if ((S.video?.fps?.lowSeconds || 0) >= 2) out.push('Turn off Auto FPS (Settings, Camera, Record Video) and add a soft light, so the frame rate stays steady.');
+  else if ((S.video?.brightness ?? 1) < 0.08) out.push('Add a soft light in front of you so the picture stays clean after upload.');
   return out;
 }
 
@@ -810,6 +1029,9 @@ ui.share.addEventListener('click', async () => {
 });
 
 addEventListener('beforeunload', (e) => { if (S?.saving) e.preventDefault(); });
+
+// Offline use: a service worker keeps a copy of the app once it has been opened.
+if ('serviceWorker' in navigator && isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
 
 // ---------------------------------------------------------------- keep the screen awake during long jobs
 

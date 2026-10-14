@@ -58,6 +58,11 @@ typography:
     fontSize: "15px"
     fontWeight: 400
     lineHeight: 1.55
+  caption:
+    fontFamily: "Barlow, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "14px"
+    fontWeight: 400
+    lineHeight: 1.55
   label:
     fontFamily: "Barlow, ui-sans-serif, system-ui, sans-serif"
     fontSize: "13px"
@@ -105,6 +110,13 @@ components:
     height: "44px"
   button-ghost-hover:
     backgroundColor: "{colors.ground-3}"
+  button-ghost-small:
+    backgroundColor: "{colors.ground-2}"
+    textColor: "{colors.text}"
+    rounded: "{rounded.control}"
+    padding: "0 12px"
+    height: "36px"
+    typography: "14px / 600"
   button-round:
     backgroundColor: "{colors.text}"
     textColor: "{colors.key-ink}"
@@ -152,6 +164,11 @@ components:
     rounded: "{rounded.plate}"
     padding: "7px 9px 6px"
   stamp-cue:
+    backgroundColor: "{colors.ground-3}"
+    textColor: "{colors.text}"
+    rounded: "{rounded.plate}"
+    padding: "7px 9px 6px"
+  stamp-note:
     backgroundColor: "{colors.ground-3}"
     textColor: "{colors.text}"
     rounded: "{rounded.plate}"
@@ -208,8 +225,8 @@ A neutral graphite field with two saturated channel colours, each carrying its o
 - **Graphite Ground** (ground): page background, the socket's recessed ring, the sticky band and save bar backing, text on light keys' inverse states.
 - **Raised Graphite** (ground-2) and **Upper Graphite** (ground-3): panels, timeline, ghost buttons, segmented track, switch track, off and cue plates. Tonal layering, not borders, separates them from the ground.
 - **Seam** (line) and **Edge** (line-2): row dividers and control borders, the waveform's centre line.
-- **Chalk** (text): primary text and the molded light-key material (pick, Fix and save, Share, Play), engaged plates, checked segments, switch-on, timeline playhead and distortion marks.
-- **Ash** (text-2) and **Smoke** (text-3): secondary copy, captions, ear names; quiet placeholders.
+- **Chalk** (text): primary text and the molded light-key material (pick, Fix and save, Share, Play), engaged plates, checked segments, switch-on, timeline playhead and distortion marks, and the side card's Picture check hint (one step brighter than the Ash instructions above it).
+- **Ash** (text-2) and **Smoke** (text-3): secondary copy, 14px captions, ear names, slider read-outs and trim times, the 1px inner edge of the timeline trim shading; quiet placeholders.
 - **Key Ink** (key-ink): text and icons on chalk keys and engaged plates. Set as a literal in the stylesheet, not a custom property.
 - **Focus White** (focus): the 2.5px focus outline everywhere.
 
@@ -232,9 +249,10 @@ A neutral graphite field with two saturated channel colours, each carrying its o
 - **Pad letter** (800, sized to the pad): the debossed L and R, rendered in SVG inside the relief, never as live HTML text.
 - **Display** (700, clamp(28px, 3.4vw, 40px), 1.12, -0.01em): reading-section headings.
 - **Headline** (700, clamp(24px, 3vw, 34px), 1.12, -0.01em, max 30ch): the one plain sentence under the pads in the empty state. File names use a smaller step (700, clamp(20px, 2.2vw, 26px)), truncated with an ellipsis.
-- **Title** (700, 17 to 22px): panel headings (19px), fix names (17px), done heading (22px).
+- **Title** (700, 17 to 22px): panel headings, reading sub-heads and the Sound, Picture and Habits tip group heads (19px); fix names, the Adjust summary and the Save as heading (17px); done heading (22px).
 - **Body** (400, 17px, 1.55): running copy, capped at 66ch in reading sections. Secondary copy steps to 15px in Ash.
-- **Label** (600 to 700, 13px, 0.08em, uppercase): ear names under the pads, Adjust group headings, the audio-only placeholder.
+- **Caption** (400, 14px, 1.55, Ash): notes under Adjust groups, the Save as note (capped at 60ch), the save-bar note, the numbered distortion list, slider read-outs, compact ghost labels (at 600) and the footer.
+- **Label** (600 to 700, 13px, 0.08em, uppercase): ear names under the pads, Adjust group headings (Sides, Clean-up, Tone, Level and width, Timing, Picture), the audio-only placeholder.
 - **Stamp** (700, 11.5px, 0.08em, uppercase, line-height 1): text on state and setting plates.
 
 ### Named Rules
@@ -246,7 +264,7 @@ A neutral graphite field with two saturated channel colours, each carrying its o
 
 A centred column capped at 1240px with a fluid gutter (clamp(16px, 3.4vw, 40px)). The empty state gives the pads 56vh (clamp 280 to 600px) as two equal columns with a 14px seam, and a round socket on the seam holds the primary action. Once a file loads, the stage becomes a sticky band at the top (pads 84 to 128px tall, 10px seam) with the ear names and route tags beneath, on a full-bleed ground and grain backing.
 
-The work area below is a 7:5 desk: media, transport and timeline on the left (sticky under the band), side check and fix list on the right, with a sticky save bar at the bottom of that column. Reading sections use two columns that collapse to one at 860px. At 640px the nav hides, the pads grow taller (clamp 340 to 520px) and the socket drops to straddle the pads' bottom edge.
+The work area below is a 7:5 desk: media, transport and timeline on the left (sticky under the band), side check, fix list, the Adjust disclosure and the Save as choice on the right, in that order, with a sticky save bar at the bottom of that column. Reading sections use two columns that collapse to one at 860px. The tips run as three grouped lists (Sound, Picture, Habits), two columns each, every group under its own heading with 34px above it. The footer is a short stack of 14px Ash lines above a 1px Seam; the line about working offline carries an Add to Home Screen hint that only iOS shows. At 640px the nav hides, the pads grow taller (clamp 340 to 520px) and the socket drops to straddle the pads' bottom edge.
 
 Spacing is a small working set: 4, 8, 10, 14, 16, 18px for internal gaps and padding, with fluid section spacing from clamp(20px, 3vw, 40px) to clamp(56px, 9vh, 96px). Hit targets are at least 44px except compact ghost buttons (36px) and timeline marks (24px).
 
@@ -278,14 +296,14 @@ Tactile and quiet; the only bright surfaces are molded chalk keys.
 - **Shape:** keys 16px (primary), controls 12px, play is a 52px circle.
 - **Primary (molded key):** chalk face rendered as lit relief, Key Ink text 18px/700, 56px tall, full width. Used for "Fix and save video", Share, and (as the round variant) Play.
 - **Hover / Active:** lift 1px on hover, press 2px down on active with the shadow shrinking; 140ms on the shared ease. Disabled at 45% opacity.
-- **Ghost:** Raised Graphite with a 1.5px Edge border, 44px, 16px/600; hover moves to Upper Graphite and a Smoke border; active presses 1px. A 36px small size exists.
+- **Ghost:** Raised Graphite with a 1.5px Edge border, 44px, 16px/600; hover moves to Upper Graphite and a Smoke border; active presses 1px. The compact size (36px, 14px/600, 12px side padding) carries in-panel actions: Set to playhead, Start after the snap, Keep the whole recording, and Reset to recommended settings, which sits left-aligned at the end of the Adjust panel. Several compact ghosts share a wrapping row with 8px gaps.
 
 ### Chips (route tags)
 - **Style:** pills 26px tall, 13px/700, cobalt with Cobalt Ink text for recorded left, vermilion with white text for recorded right, soft tag shadow.
 - **State:** they sit under the ear names and trade slots when the sound is swapped.
 
 ### Segmented control and switch
-- **Segmented:** Upper Graphite track (13px radius, 4px padding), 38px options in Ash; checked option inverts to chalk with ground text.
+- **Segmented:** Upper Graphite track (13px radius, 4px padding), 38px options in Ash; checked option inverts to chalk with ground text. It carries the fix-row presets (hiss, volume, 3D width or Almost mono) and the Save as choice.
 - **Switch:** 50x30 pill, Upper Graphite with Edge border; on, it fills chalk and the knob turns ground, sliding 20px in 180ms.
 
 ### Cards / Containers
@@ -297,20 +315,32 @@ Tactile and quiet; the only bright surfaces are molded chalk keys.
 
 ### Inputs / Fields
 - **Select:** 40px, 10px radius, 1.5px Edge border, Raised Graphite, drawn chevron in Ash.
-- **Range:** native slider tinted chalk via accent-color, 28px hit height.
+- **Range:** native slider tinted chalk via accent-color, 28px hit height, spanning the row under its label. The value reads out at 14px in Ash on the right of the label and is mirrored to aria-valuetext in the same words.
 - **Focus:** 2.5px Focus White outline, 2 to 3px offset, on every interactive element including the timeline wrapper.
 
 ### Navigation
 - **Style:** brand mark plus wordmark (18px/700) on the left, text links at 15px in Ash on the right; hover turns chalk and underlines. Hidden below 640px.
 
 ### Stamps (state and setting plates)
-Small lit plates carrying 11.5px uppercase text. Engaged states (Fixing, Fixed, recommended Set values) are raised chalk plates with Key Ink text; Off and Not needed are pressed Raised Graphite plates with Ash text; cue tips are raised Upper Graphite plates; "Can't fix" uses Right Signal text. A changed state re-presses with a 220ms scale from 1.12 to 1.
+Small lit plates carrying 11.5px uppercase text. Engaged states (Fixing, Fixed, recommended Set values) are raised chalk plates with Key Ink text; Off and Not needed are pressed Raised Graphite plates with Ash text; cue tips and Note stamps (conditions with nothing to switch, such as complete silence between sounds, a dropped frame rate or a very dark picture) are raised Upper Graphite plates; "Can't fix" (distortion, Bluetooth-muffled sound) uses Right Signal text. A changed state re-presses with a 220ms scale from 1.12 to 1.
+
+### Side check panel
+A Raised Graphite panel (18px radius, 18px 20px padding, 10px gaps): a 19px heading, the instruction in 15px Ash, then, when the picture gave an answer, a second paragraph in Chalk led by a bold "Picture check:" label. A ghost button below plays the moment; its label follows the state ("Play the snap", "Play a side check", "Play another check"). The answer choices are ghost buttons, and the chosen one inverts to chalk.
+
+### Fix list
+Rows divided by 1px Seam with 16px vertical padding: the 17px/700 name on the left, its stamp top-right, a 15px Ash explanation, and the control on a full-width line below (a switch pushed right, or a segmented preset). On near-mono files an "Almost mono" row with Off, Subtle and Strong replaces 3D width. Rows that only report a condition carry a stamp and no control.
+
+### Adjust panel
+A disclosure under a 1px Seam with a 17px/700 summary and a drawn Ash chevron that turns over 180ms. Groups sit 18px apart (Sides, Clean-up, Tone, Level and width, Timing, and Picture for video), each led by a Label heading with 12px between rows. A row puts the 15px/600 label on the left and the control or read-out on the right; sliders span the full width beneath. Level and width shows a single width slider, mono widening or 3D width depending on the file. Timing pairs Start and End, each with its time in 500 Ash, with a compact Set to playhead button, then a wrapping row of compact actions and the Sound sync slider. Captions close a group at 14px in Ash.
+
+### Save as
+Between the Adjust panel and the save bar, opened by a 1px Seam: a 17px/700 heading, one segmented control and a 14px Ash note (max 60ch) describing the chosen format, all left-aligned with 10px gaps. Video offers Same format, Smaller MP4 and TikTok & Reels; audio offers M4A and WAV; when the browser cannot encode AAC only the lossless choice shows.
 
 ### Pads and meter (signature)
 Each pad is a lit relief of its channel colour with the letter pressed in (and a raised tactile dot top-left on L). Two overlay layers repeat the same relief with the letter painted in the channel's lit tint and in Shared Purple; they reveal from the bottom by translate as level rises, so the pressed walls keep their shading. A side-check ping flashes a 18% white veil and sweeps the meter over 900ms.
 
 ### Timeline
-112px, 14px radius, Raised Graphite. L waveform above a 1px Edge centre line, R below, both in signal tints (peaks at 38% opacity, RMS solid), with the shared portion drawn in Shared Purple across the middle. 2px chalk playhead; numbered chalk circles mark distortion.
+112px, 14px radius, Raised Graphite. L waveform above a 1px Edge centre line, R below, both in signal tints (peaks at 38% opacity, RMS solid), with the shared portion drawn in Shared Purple across the middle. 2px chalk playhead; numbered chalk circles mark distortion. When the recording is trimmed, the cut-off ends are shaded with a dark veil (rgb(12 12 12 / 0.62)) finished by a 1px Ash inner edge where the kept part begins; the shading sits under the playhead and the marks.
 
 ### Route swap (signature motion)
 When the sound is swapped, the two tags trade slots along separate lanes (16px apart vertically, scaling to 1.06 at the midpoint) over 640ms on cubic-bezier(0.16, 1, 0.3, 1). The pads stay still. Reduced motion skips the animation and only re-slots the tags.
@@ -324,6 +354,7 @@ When the sound is swapped, the two tags trade slots along separate lanes (16px a
 - Move the route tags, never the pads, to show re-routing.
 - Use cubic-bezier(0.16, 1, 0.3, 1) for state motion (140 to 180ms on controls, 640ms for the swap, 900ms for meter sweeps) and honour prefers-reduced-motion.
 - Keep the 7% grain fixed behind everything, including the sticky band.
+- Put the note that explains a control's consequence directly under it as a 14px Ash caption (Adjust notes, the Save as note, the save-bar note).
 
 ### Don't:
 - Don't add a light theme; the system is dark only by use scene.
